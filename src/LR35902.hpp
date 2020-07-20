@@ -14,8 +14,16 @@ class LR35902 final
         LR35902(Emulator&);
         ~LR35902() {}
 
-        void set_PC(u16 value) { m_PC = value; }
-        void set_SP(u16 value) { m_SP = value; }
+        void cycle();
+        bool halted() const { return m_halted; }
+        void dump_registers() const;
+
+        void start_dma(u8);
+        bool doing_dma() const { return m_doing_dma; }
+        void cycle_dma();
+
+        void setPC(u16 value) { m_PC = value; }
+        void setSP(u16 value) { m_SP = value; }
         u16 PC() const { return m_PC; }
         u16 SP() const { return m_SP; }
 
@@ -28,7 +36,7 @@ class LR35902 final
             };
         };
 
-        inline u8 reg8(RegisterIndex8 register_index)
+        inline u8 reg8(RegisterIndex8 register_index) const
         {
             return m_registers[register_index];
         }
@@ -36,14 +44,14 @@ class LR35902 final
         {
             m_registers[register_index] = value;
         }
-        inline u8 regA() { return reg8(RegisterA); }
-        inline u8 regB() { return reg8(RegisterB); }
-        inline u8 regC() { return reg8(RegisterC); }
-        inline u8 regD() { return reg8(RegisterD); }
-        inline u8 regE() { return reg8(RegisterE); }
-        inline u8 regF() { return reg8(RegisterF); }
-        inline u8 regH() { return reg8(RegisterH); }
-        inline u8 regL() { return reg8(RegisterL); }
+        inline u8 regA() const { return reg8(RegisterA); }
+        inline u8 regB() const { return reg8(RegisterB); }
+        inline u8 regC() const { return reg8(RegisterC); }
+        inline u8 regD() const { return reg8(RegisterD); }
+        inline u8 regE() const { return reg8(RegisterE); }
+        inline u8 regF() const { return reg8(RegisterF); }
+        inline u8 regH() const { return reg8(RegisterH); }
+        inline u8 regL() const { return reg8(RegisterL); }
         inline void setA(u8 value) { set_reg8(RegisterA, value); }
         inline void setB(u8 value) { set_reg8(RegisterB, value); }
         inline void setC(u8 value) { set_reg8(RegisterC, value); }
@@ -71,7 +79,6 @@ class LR35902 final
         inline bool CF() { return flag(Flags::CF); }
         inline void set_flag(Flags::Flag flag, bool value)
         {
-            u8 mask = 0xff * value & flag;
             m_registers[RegisterF] &= ~(u8)flag;
             m_registers[RegisterF] |= (u8)(0xff * value) & flag;
         }
@@ -79,6 +86,22 @@ class LR35902 final
         inline void set_NF(bool value) { set_flag(Flags::NF, value); }
         inline void set_HF(bool value) { set_flag(Flags::HF, value); }
         inline void set_CF(bool value) { set_flag(Flags::CF, value); }
+
+        inline void request_vblank_interrupt() { m_interrupt_flag_reg |= 0x01; }
+        inline void request_LCD_interrupt() { m_interrupt_flag_reg |= 0x02; }
+        inline void request_timer_interrupt() { m_interrupt_flag_reg |= 0x04; }
+        inline void request_serial_interrupt() { m_interrupt_flag_reg |= 0x08; }
+        inline void request_joypad_interrupt() { m_interrupt_enable_reg |= 0x10; }
+        inline u8 interrupt_enable() const { return m_interrupt_enable_reg; }
+        inline u8 interrupt_flag() const { return m_interrupt_flag_reg; }
+        inline void set_interrupt_enable(u8 value)
+        {
+            m_interrupt_enable_reg = value & 0x1f;
+        }
+        inline void set_interrupt_flag(u8 value)
+        {
+            m_interrupt_flag_reg = 0xe0 | (value & 0x1f);
+        }
 
         u8 pop8();
         u16 pop16();
@@ -93,16 +116,29 @@ class LR35902 final
 
     private:
         void do_cycle();
+        bool handle_interrupt();
 
         void INC(u8&);
         void DEC(u8&);
+        void ADD(u8);
         void ADC(u8);
+        void SUB(u8);
         void SBC(u8);
+        void AND(u8);
         void XOR(u8);
         void OR(u8);
+        void CP(u8);
+        void RLC(u8&);
+        void RRC(u8&);
+        void RL(u8&);
         void RR(u8&);
         void SRL(u8&);
+        void SLA(u8&);
+        void SRA(u8&);
         void SWAP(u8&);
+        void BIT(u8, u8);
+        void RES(u8&, u8);
+        void SET(u8&, u8);
 
         // ^InstructionInterpreter
         virtual void illegal_instruction(const Instruction&) override;
@@ -221,6 +257,15 @@ class LR35902 final
         u16 m_PC;
         u16 m_SP;
         u8 m_registers[8];
+        bool m_halted { false };
+        bool m_interrupts_enabled { true };
+
+        u8 m_interrupt_enable_reg { 0 };
+        u8 m_interrupt_flag_reg { 0 };
+
+        bool m_doing_dma { false };
+        u8 m_dma_source_sector { 0 };
+        usize m_dma_progress { 0 };
 };
 
 }

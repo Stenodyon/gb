@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -g $(shell pkg-config --cflags sdl2)
+CXXFLAGS := -Wall -Wextra -std=c++17 -g $(shell pkg-config --cflags sdl2)
 LDFLAGS  := $(shell pkg-config --libs sdl2)
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/obj

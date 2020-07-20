@@ -4,7 +4,7 @@
 
 namespace GB {
 
-const u32 CartHeader::BASE_ADDRESS = 0x100;
+const u16 CartHeader::BASE_ADDRESS = 0x100;
 
 const char* MBCTypeName(MBCTypes::Type mbc_type)
 {
@@ -223,6 +223,7 @@ Cart::Cart(const u8* data)
     m_mbc = MemoryBankController::create(data);
 
     printf("Loaded cartridge [%s]\n", m_header.title().c_str());
+    printf("Memory Bank Controller: %s\n", MBCTypeName(m_header.mbc_type()));
 
     if (m_header.checksum_header()) {
         printf("Checksum valid! :)\n");
@@ -273,7 +274,7 @@ NoBanking::~NoBanking()
         free(m_ram);
 }
 
-u8 NoBanking::read8(u32 address) {
+u8 NoBanking::read8(u16 address) {
     if (address < 0x8000)
         return read8_rom(address);
 
@@ -290,7 +291,7 @@ u8 NoBanking::read8(u32 address) {
     assert(false);
 }
 
-void NoBanking::write8(u32 address, u8 value) {
+void NoBanking::write8(u16 address, u8 value) {
     if (address < 0x8000) {
         write8_rom(address, value);
         return;
@@ -304,22 +305,23 @@ void NoBanking::write8(u32 address, u8 value) {
         if (offset_address >= m_ram_size)
             return;
         write8_ram(offset_address, value);
+        return;
     }
 
     assert(false);
 }
 
-u8 NoBanking::read8_rom(u32 address)
+u8 NoBanking::read8_rom(u16 address)
 {
     return m_rom[address];
 }
 
-u8 NoBanking::read8_ram(u32 offset)
+u8 NoBanking::read8_ram(u16 offset)
 {
     return m_ram[offset];
 }
 
-void NoBanking::write8_rom(u32 address, u8 value)
+void NoBanking::write8_rom(u16 address, u8 value)
 {
     fprintf(
             stderr,
@@ -329,7 +331,7 @@ void NoBanking::write8_rom(u32 address, u8 value)
            );
 }
 
-void NoBanking::write8_ram(u32 offset, u8 value)
+void NoBanking::write8_ram(u16 offset, u8 value)
 {
     m_ram[offset] = value;
 }
@@ -343,21 +345,27 @@ MBC1::~MBC1()
 {
 }
 
-u8 MBC1::read8_rom(u32 address)
+u8 MBC1::read8_rom(u16 address)
 {
     if (address < 0x4000)
         return m_rom[address];
     return m_rom[rom_bank_base() + address - 0x4000];
 }
 
-u8 MBC1::read8_ram(u32 offset)
+u8 MBC1::read8_ram(u16 offset)
 {
     if (!m_ram_enabled)
         return 0xff;
-    return m_ram[ram_bank_base() + offset];
+
+    u8 value = m_ram[ram_bank_base() + offset];
+#if 0
+    printf("Reading from cart ram [0x%04x] = 0x%02x\n",
+            offset,  value);
+#endif
+    return value;
 }
 
-void MBC1::write8_rom(u32 address, u8 value)
+void MBC1::write8_rom(u16 address, u8 value)
 {
     if (address < 0x2000) { // RAM Enable
         m_ram_enabled = (value & 0x0a) == 0xa;
@@ -396,10 +404,15 @@ void MBC1::write8_rom(u32 address, u8 value)
     assert(false); // unreachable
 }
 
-void MBC1::write8_ram(u32 offset, u8 value)
+void MBC1::write8_ram(u16 offset, u8 value)
 {
     if (!m_ram_enabled)
         return;
+
+#if 0
+    printf("Writing to cart ram [0x%04x] = 0x%02x\n",
+            ram_bank_base() + offset,  value);
+#endif
     m_ram[ram_bank_base() + offset] = value;
 }
 

@@ -24,6 +24,7 @@ enum InstructionFormat {
     OP_A_iC,
     OP_iHL,
     OP_iHL_r8,
+    OP_iHL_imm8,
     OP_r8_iHL,
     OP_iimm8_A,
     OP_A_iimm8,
@@ -122,6 +123,11 @@ class Instruction {
         {
             assert(m_descriptor->has_imm16());
             return m_imm16;
+        }
+        inline u8 special_bit() const
+        {
+            u8 opcode = has_sub_op() ? m_sub_op : m_opcode;
+            return (opcode & (0b111 << 3)) >> 3;
         }
 
         std::string to_string() const;

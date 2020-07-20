@@ -1,9 +1,10 @@
 #include <cstdio>
 
-#include <SDL2/SDL.h>
+#include "SDL.h"
 
 #include "Cart.hpp"
 #include "Emulator.hpp"
+#include "Joypad.hpp"
 
 u8* load_file(const char* filename)
 {
@@ -27,6 +28,53 @@ u8* load_file(const char* filename)
     return data;
 }
 
+void handle_keypress(GB::Emulator& emulator, SDL_KeyboardEvent* event)
+{
+    bool pressed = event->type == SDL_KEYDOWN;
+    switch (event->keysym.sym) {
+        case SDLK_w:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::UP, pressed);
+            break;
+        case SDLK_s:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::DOWN, pressed);
+            break;
+        case SDLK_a:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::LEFT, pressed);
+            break;
+        case SDLK_d:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::RIGHT, pressed);
+            break;
+        case SDLK_j:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::B, pressed);
+            break;
+        case SDLK_k:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::A, pressed);
+            break;
+        case SDLK_t:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::SELECT, pressed);
+            break;
+        case SDLK_y:
+            emulator
+                .joypad()
+                .set_button_status(GB::Joypad::Buttons::START, pressed);
+            break;
+    }
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <rom-file>\n", argv[0]);
@@ -47,13 +95,13 @@ int main(int argc, char** argv) {
             160 * 4, 144 * 4,
             SDL_WINDOW_SHOWN
             );
-    if (!window) {
+    if (window == NULL) {
         fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
         exit(-1);
     }
 
     auto* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
+    if (renderer == NULL) {
         fprintf(stderr, "Could not create renderer: %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
         exit(-1);
@@ -61,11 +109,11 @@ int main(int argc, char** argv) {
 
     auto* texture = SDL_CreateTexture(
             renderer,
-            SDL_PIXELFORMAT_RGB888,
+            SDL_PIXELFORMAT_BGR888,
             SDL_TEXTUREACCESS_STREAMING,
             160, 144
             );
-    if (!texture) {
+    if (texture == NULL) {
         fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
@@ -75,19 +123,47 @@ int main(int argc, char** argv) {
     GB::Cart cart(rom_data);
     GB::Emulator emulator(&cart, texture);
 
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+
+    bool run = false;
     while (true) {
         auto start_millis = SDL_GetTicks();
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                    {
+                        auto* key_event = reinterpret_cast<SDL_KeyboardEvent*>(&event);
+                        handle_keypress(emulator, key_event);
+
+                        if (key_event->type == SDL_KEYDOWN) {
+                            if (key_event->keysym.sym == SDLK_n)
+                                emulator.step();
+                            if (key_event->keysym.sym == SDLK_c)
+                                run = true;
+                            if (key_event->keysym.sym == SDLK_x)
+                                run = false;
+                            if (key_event->keysym.sym == SDLK_b) {
+                                printf(
+                                        "joypad=%02x\n",
+                                        emulator.joypad().read_register()
+                                      );
+                            }
+                        }
+                    }
+                    break;
+
                 case SDL_QUIT:
                     goto main_loop_exit;
             }
         }
 
-        emulator.exec_to_next_frame();
+        if (run)
+            emulator.exec_to_next_frame();
 
+        SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 

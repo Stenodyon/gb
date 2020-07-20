@@ -42,7 +42,7 @@ class CartHeader {
         bool checksum_header() const;
 
     private:
-        static const u32 BASE_ADDRESS;
+        static const u16 BASE_ADDRESS;
 
         struct RawHeader {
             u32 entry_point;
@@ -69,8 +69,8 @@ class MemoryBankController {
 
         virtual ~MemoryBankController() {}
 
-        virtual u8 read8(u32) = 0;
-        virtual void write8(u32, u8) = 0;
+        virtual u8 read8(u16) = 0;
+        virtual void write8(u16, u8) = 0;
 };
 
 class NoBanking : public MemoryBankController {
@@ -78,14 +78,14 @@ class NoBanking : public MemoryBankController {
         explicit NoBanking(const u8*);
         ~NoBanking();
 
-        virtual u8 read8(u32) override;
-        virtual void write8(u32, u8) override;
+        virtual u8 read8(u16) override;
+        virtual void write8(u16, u8) override;
 
     protected:
-        virtual u8 read8_rom(u32);
-        virtual u8 read8_ram(u32);
-        virtual void write8_rom(u32, u8);
-        virtual void write8_ram(u32, u8);
+        virtual u8 read8_rom(u16);
+        virtual u8 read8_ram(u16);
+        virtual void write8_rom(u16, u8);
+        virtual void write8_ram(u16, u8);
 
         const u8* m_rom;
         usize m_ram_size = 0;
@@ -101,10 +101,10 @@ class MBC1 : public NoBanking {
         inline usize rom_bank_base() { return m_rom_bank * ROM_BANK_SIZE; }
         inline usize ram_bank_base() { return m_ram_bank * RAM_BANK_SIZE; }
 
-        virtual u8 read8_rom(u32) override;
-        virtual u8 read8_ram(u32) override;
-        virtual void write8_rom(u32, u8) override;
-        virtual void write8_ram(u32, u8) override;
+        virtual u8 read8_rom(u16) override;
+        virtual u8 read8_ram(u16) override;
+        virtual void write8_rom(u16, u8) override;
+        virtual void write8_ram(u16, u8) override;
 
         enum BankingMode {
             ROM_BANKING,
@@ -124,8 +124,8 @@ class Cart {
 
         const u8* data() const { return m_data; }
 
-        u8 read8(u32 address) { return m_mbc->read8(address); }
-        void write8(u32 address, u8 value) { m_mbc->write8(address, value); }
+        u8 read8(u16 address) { return m_mbc->read8(address); }
+        void write8(u16 address, u8 value) { m_mbc->write8(address, value); }
 
         const CartHeader& header() const { return m_header; }
 

@@ -5,6 +5,8 @@
 #include "Cart.hpp"
 #include "MemoryMapper.hpp"
 #include "PPU.hpp"
+#include "Joypad.hpp"
+#include "Timer.hpp"
 
 #include <SDL2/SDL.h>
 
@@ -14,9 +16,14 @@ class Emulator {
     public:
         Emulator(Cart*, SDL_Texture*);
 
+        void step();
         void exec_to_next_frame();
-        MemoryMapper& mmu() { return m_mmu; }
-        PPU& ppu() { return m_ppu; }
+
+        inline LR35902& cpu() { return m_cpu; }
+        inline MemoryMapper& mmu() { return m_mmu; }
+        inline PPU& ppu() { return m_ppu; }
+        inline Joypad& joypad() { return m_joypad; }
+        inline Timer& timer() { return m_timer; }
 
         void notify_frame_end() { m_frame_end = true; }
 
@@ -24,6 +31,8 @@ class Emulator {
         MemoryMapper m_mmu;
         LR35902 m_cpu;
         PPU m_ppu;
+        Joypad m_joypad;
+        Timer m_timer;
 
         bool m_frame_end { false };
 };

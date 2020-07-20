@@ -79,6 +79,7 @@ const char* instruction_format_name(InstructionFormat format)
         case OP_A_iC:       return "OP_A_iC";
         case OP_iHL:        return "OP_iHL";
         case OP_iHL_r8:     return "OP_iHL_r8";
+        case OP_iHL_imm8:   return "OP_iHL_imm8";
         case OP_r8_iHL:     return "OP_r8_iHL";
         case OP_iimm8_A:    return "OP_iimm8_A";
         case OP_A_iimm8:    return "OP_A_iimm8";
@@ -178,7 +179,7 @@ static void build_cb(
     build(0x06, "LD", OP_r8_imm8, &InstructionInterpreter::LD_r8_imm8);
     build(0x16, "LD", OP_r8_imm8, &InstructionInterpreter::LD_r8_imm8);
     build(0x26, "LD", OP_r8_imm8, &InstructionInterpreter::LD_r8_imm8);
-    build(0x36, "LD", OP_ir16_imm8, &InstructionInterpreter::LD_iHL_imm8);
+    build(0x36, "LD", OP_iHL_imm8, &InstructionInterpreter::LD_iHL_imm8);
 
     build(0x07, "RLCA", OP_NONE, &InstructionInterpreter::RLCA);
     build(0x17, "RLA", OP_NONE, &InstructionInterpreter::RLA);
@@ -195,8 +196,8 @@ static void build_cb(
     build(0x29, "ADD HL,", OP_r16, &InstructionInterpreter::ADD_HL_r16);
     build(0x39, "ADD HL,", OP_r16, &InstructionInterpreter::ADD_HL_r16);
 
-    build(0x0a, "LD", OP_A_ir16, &InstructionInterpreter::LD_ir16_A);
-    build(0x1a, "LD", OP_A_ir16, &InstructionInterpreter::LD_ir16_A);
+    build(0x0a, "LD", OP_A_ir16, &InstructionInterpreter::LD_A_ir16);
+    build(0x1a, "LD", OP_A_ir16, &InstructionInterpreter::LD_A_ir16);
     build(0x2a, "LD", OP_A_ir16inc, &InstructionInterpreter::LD_A_HLinc);
     build(0x3a, "LD", OP_A_ir16dec, &InstructionInterpreter::LD_A_HLdec);
 
@@ -400,37 +401,37 @@ static void build_cb(
     for (usize opcode = 0x08; opcode < 0x10; ++opcode) {
         build_cb((u8)opcode, "RRC", OP_sr8, &InstructionInterpreter::RRC_r8);
     }
-    build_cb(0x06, "RRC", OP_iHL, &InstructionInterpreter::RRC_iHL);
+    build_cb(0x0e, "RRC", OP_iHL, &InstructionInterpreter::RRC_iHL);
 
     for (usize opcode = 0x10; opcode < 0x18; ++opcode) {
         build_cb((u8)opcode, "RL", OP_sr8, &InstructionInterpreter::RL_r8);
     }
-    build_cb(0x06, "RL", OP_iHL, &InstructionInterpreter::RL_iHL);
+    build_cb(0x16, "RL", OP_iHL, &InstructionInterpreter::RL_iHL);
 
     for (usize opcode = 0x18; opcode < 0x20; ++opcode) {
         build_cb((u8)opcode, "RR", OP_sr8, &InstructionInterpreter::RR_r8);
     }
-    build_cb(0x06, "RR", OP_iHL, &InstructionInterpreter::RR_iHL);
+    build_cb(0x1e, "RR", OP_iHL, &InstructionInterpreter::RR_iHL);
 
     for (usize opcode = 0x20; opcode < 0x28; ++opcode) {
         build_cb((u8)opcode, "SLA", OP_sr8, &InstructionInterpreter::SLA_r8);
     }
-    build_cb(0x06, "SLA", OP_iHL, &InstructionInterpreter::SLA_iHL);
+    build_cb(0x26, "SLA", OP_iHL, &InstructionInterpreter::SLA_iHL);
 
     for (usize opcode = 0x28; opcode < 0x30; ++opcode) {
         build_cb((u8)opcode, "SRA", OP_sr8, &InstructionInterpreter::SRA_r8);
     }
-    build_cb(0x06, "SRA", OP_iHL, &InstructionInterpreter::SRA_iHL);
+    build_cb(0x2e, "SRA", OP_iHL, &InstructionInterpreter::SRA_iHL);
 
     for (usize opcode = 0x30; opcode < 0x38; ++opcode) {
         build_cb((u8)opcode, "SWAP", OP_sr8, &InstructionInterpreter::SWAP_r8);
     }
-    build_cb(0x06, "SWAP", OP_iHL, &InstructionInterpreter::SWAP_iHL);
+    build_cb(0x36, "SWAP", OP_iHL, &InstructionInterpreter::SWAP_iHL);
 
     for (usize opcode = 0x38; opcode < 0x40; ++opcode) {
         build_cb((u8)opcode, "SRL", OP_sr8, &InstructionInterpreter::SRL_r8);
     }
-    build_cb(0x06, "SRL", OP_iHL, &InstructionInterpreter::SRL_iHL);
+    build_cb(0x3e, "SRL", OP_iHL, &InstructionInterpreter::SRL_iHL);
 
     for (usize opcode = 0x40; opcode < 0x80; ++opcode) {
         build_cb((u8)opcode, "BIT", OP_sr8, &InstructionInterpreter::BIT_r8);
@@ -489,6 +490,7 @@ bool InstructionDescriptor::has_imm8() const
         case OP_r8_imm8:
         case OP_iimm8_A:
         case OP_A_iimm8:
+        case OP_iHL_imm8:
         case OP_cond_imm8:
         case OP_ir16_imm8:
         case OP_SP_imm8:
@@ -514,6 +516,7 @@ bool InstructionDescriptor::has_imm16() const
         case OP_A_iC:
         case OP_iHL:
         case OP_iHL_r8:
+        case OP_iHL_imm8:
         case OP_r8_iHL:
         case OP_iimm8_A:
         case OP_A_iimm8:
@@ -755,6 +758,28 @@ std::string Instruction::to_string() const
             break;
         case OP_ir16:
             out << " (" << register_name(dst_reg16()) << ")";
+            break;
+        case OP_ir16_imm8:
+            out << " (" << register_name(dst_reg16())
+                << "), " << format_u8(imm8());
+            break;
+        case OP_iC_A:
+            out << " (0xff00 + C), A";
+            break;
+        case OP_iimm16_SP:
+            out << " (" << format_u16(imm16()) << "), SP";
+            break;
+        case OP_iHL_imm8:
+            out << "(HL), " << format_u8(imm8());
+            break;
+        case OP_A_ir16dec:
+            out << "A, (HL-)";
+            break;
+        case OP_SP_imm8:
+            out << "SP, " << format_u8(imm8());
+            break;
+        case OP_A_iC:
+            out << "A, (C)";
             break;
 
         default:
