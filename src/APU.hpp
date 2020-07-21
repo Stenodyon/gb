@@ -6,7 +6,7 @@
 namespace GB {
 
 static const usize AUDIO_SAMPLES_COUNT = 735;
-static const usize CYCLES_PER_SAMPLE = (usize)(4194304.0 / 44100.0);
+static const usize CYCLES_PER_SAMPLE = (usize)(4194304.0 * 1000.0 / 44100.0);
 static const float BASE_VOLUME = 0.10;
 
 static const u8 DUTIES[4][8] = {
@@ -15,6 +15,8 @@ static const u8 DUTIES[4][8] = {
     { 1, 0, 0, 0, 0, 1, 1, 1 },
     { 0, 1, 1, 1, 1, 1, 1, 0 },
 };
+
+class APU;
 
 class Channel1 {
     public:
@@ -31,20 +33,29 @@ class Channel1 {
 
 class Channel2 {
     public:
+        explicit Channel2(APU&);
+
         void cycle();
         float sample();
+        inline bool stopped() const { return m_stopped; }
+        inline void stop() { m_stopped = true; }
 
         inline u8 NR21() const { return m_NR21 & 0xc0; }
         inline void set_NR21(u8 value)
         {
             m_NR21 = value;
-            m_length_counter = length_counter_base();
+            reset_length_counter();
         }
         inline u8 NR22() const { return m_NR22; }
         inline void set_NR22(u8 value) { m_NR22 = value; }
         inline void set_NR23(u8 value) { m_NR23 = value; }
         inline u8 NR24() const { return m_NR24 & 0x40; }
-        inline void set_NR24(u8 value) { m_NR24 = value; }
+        inline void set_NR24(u8 value)
+        {
+            m_NR24 = value;
+            if (m_NR24 & 0x80)
+                restart();
+        }
 
         inline u16 period() const
         {
@@ -52,23 +63,41 @@ class Channel2 {
             return (2048 - internal_repr) * 4;
         }
         inline u8 duty() const { return (m_NR21 & 0xc0) >> 6; }
-        inline bool stop_after_length() const { return (m_NR24 & 0x40); }
+        inline bool stop_after_length() const { return m_NR24 & 0x40; }
         inline u8 length_counter_base() const { return 64 - (m_NR21 & 0x1f); }
+        inline u8 envelope_period() const { return m_NR22 & 0x07; }
+        inline bool envelope_increases() const { return m_NR22 & 0x08; }
+        inline u8 envelope_base_volume() const { return (m_NR22 & 0xf0) >> 4; }
 
     private:
+        APU& m_apu;
+
         u8 m_NR21 { 0 };
         u8 m_NR22 { 0 };
         u8 m_NR23 { 0 };
         u8 m_NR24 { 0 };
 
+        bool m_stopped { true };
         u16 m_duty_timer { 0 };
         usize m_frequency_timer { 0 };
         usize m_length_timer { 0 };
         u8 m_length_counter { 0 };
+        usize m_envelope_timer { 0 };
+        usize m_envelope_counter { 0 };
+        u8 m_envelope_volume { 0 };
 
         void cycle_frequency();
         void cycle_length();
-        void reset_length_counter();
+        void cycle_envelope();
+        void restart();
+        inline void reset_length_counter()
+        {
+            m_length_counter = length_counter_base();
+        }
+        inline void reset_envelope()
+        {
+            m_envelope_volume = envelope_base_volume();
+        }
 };
 
 class Channel3 {
@@ -109,7 +138,12 @@ class APU {
         inline void set_NR50(u8 value) { m_NR50 = value; }
         inline u8 NR51() const { return m_NR51; }
         inline void set_NR51(u8 value) { m_NR51 = value; }
-        inline u8 NR52() const { return m_NR52 | 0x70 ; }
+        inline u8 NR52() const
+        {
+            return m_NR52
+                | (m_channel2.stopped() ? 0 : 0x02)
+                | 0x70;
+        }
         inline void set_NR52(u8 value) { m_NR52 = (m_NR52 & 0x7f) | (value & 0x80); }
 
         inline Channel1& channel1() { return m_channel1; }

@@ -10,6 +10,7 @@ void audio_callback(void*, u8*, int);
 
 APU::APU(Emulator& emulator)
     : m_emulator(emulator)
+    , m_channel2(*this)
 {
     SDL_AudioSpec desired_spec;
     desired_spec.freq = 44100;
@@ -44,11 +45,11 @@ void APU::cycle()
     m_channel1.cycle();
     m_channel2.cycle();
 
-    ++m_cycle_counter;
+    m_cycle_counter += 1000;
 
     if (m_cycle_counter >= CYCLES_PER_SAMPLE) {
         sample_audio();
-        m_cycle_counter = 0;
+        m_cycle_counter %= CYCLES_PER_SAMPLE;
     }
 }
 
@@ -125,6 +126,7 @@ void APU::add_sample(u8 left_sample, u8 right_sample)
 }
 
 static const usize CYCLES_PER_LENGTH_TICK = 16384;
+static const usize CYCLES_PER_ENVELOPE_TICK = 65536;
 
 void Channel1::cycle()
 {
@@ -133,6 +135,11 @@ void Channel1::cycle()
 float Channel1::sample()
 {
     return 0.0;
+}
+
+Channel2::Channel2(APU& apu)
+    : m_apu(apu)
+{
 }
 
 void Channel2::cycle()
@@ -144,13 +151,18 @@ void Channel2::cycle()
         cycle_frequency();
     }
 
-    if (m_length_counter == 0)
-        return;
-
     ++m_length_timer;
     if (m_length_timer >= CYCLES_PER_LENGTH_TICK) {
         m_length_timer = 0;
-        cycle_length();
+        if (m_length_counter != 0)
+            cycle_length();
+    }
+
+    ++m_envelope_timer;
+    if (m_envelope_timer >= CYCLES_PER_ENVELOPE_TICK) {
+        m_envelope_timer = 0;
+        if (envelope_period() != 0)
+            cycle_envelope();
     }
 }
 
@@ -165,19 +177,42 @@ void Channel2::cycle_length()
 {
     --m_length_counter;
 
-    if (m_length_counter == 0)
-        reset_length_counter();
+    if (m_length_counter == 0) {
+        if (!stop_after_length())
+            reset_length_counter();
+        else
+            stop();
+    }
 }
 
-void Channel2::reset_length_counter()
+void Channel2::cycle_envelope()
 {
-    if (!stop_after_length())
-        m_length_counter = length_counter_base();
+    ++m_envelope_counter;
+    if (m_envelope_counter >= envelope_period()) {
+        m_envelope_counter = 0;
+
+        if (m_envelope_volume == 0 && !envelope_increases())
+            return;
+        if (m_envelope_volume >= 0x0f && envelope_increases())
+            return;
+        m_envelope_volume += envelope_increases() ? 1 : -1;
+    }
+}
+
+void Channel2::restart()
+{
+    reset_length_counter();
+    reset_envelope();
+    m_stopped = false;
 }
 
 float Channel2::sample()
 {
-    return (float)DUTIES[duty()][m_frequency_timer];
+    if (stopped())
+        return 0;
+
+    auto volume = (float)(m_envelope_volume & 0xf) / (float)0xf;
+    return volume * (float)DUTIES[duty()][m_frequency_timer];
 }
 
 
