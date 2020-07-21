@@ -22,6 +22,47 @@ class Channel1 {
     public:
         void cycle();
         float sample();
+        inline bool stopped() const { return m_stopped; }
+        inline void stop() { m_stopped = true; }
+
+        inline u8 NR10() const { return m_NR10; }
+        inline void set_NR10(u8 value) { m_NR10 = value; }
+        inline u8 NR11() const { return m_NR11 & 0xc0; }
+        inline void set_NR11(u8 value)
+        {
+            m_NR11 = value;
+            reset_length_counter();
+        }
+        inline u8 NR12() const { return m_NR12; }
+        inline void set_NR12(u8 value) { m_NR12 = value; }
+        inline void set_NR13(u8 value) { m_NR13 = value; }
+        inline u8 NR14() const { return m_NR14 & 0x40; }
+        inline void set_NR14(u8 value)
+        {
+            m_NR14 = value;
+            if (m_NR14 & 0x80)
+                restart();
+        }
+
+        inline u16 frequency() const
+        {
+            return ((u16)(m_NR14 & 0b111) << 8) | (u16)m_NR13;
+        }
+        inline void set_frequency(u16 value)
+        {
+            m_NR13 = (u8)(value & 0xff);
+            m_NR14 = (m_NR14 & 0xf8) | (u8)(value >> 8);
+        }
+        inline u16 period() const { return (2048 - frequency()) * 4; }
+        inline u8 duty() const { return (m_NR11 & 0xc0) >> 6; }
+        inline u8 sweep_time() const { return (m_NR10 & 0x70) >> 4; }
+        inline bool sweep_increases() const { return m_NR10 & 0x080; }
+        inline u8 sweep_shifts() const { return m_NR10 & 0x07; }
+        inline bool stop_after_length() const { return m_NR14 & 0x40; }
+        inline u8 length_counter_base() const { return 64 - (m_NR11 & 0x1f); }
+        inline u8 envelope_period() const { return m_NR12 & 0x07; }
+        inline bool envelope_increases() const { return m_NR12 & 0x08; }
+        inline u8 envelope_base_volume() const { return (m_NR12 & 0xf0) >> 4; }
 
     private:
         u8 m_NR10 { 0 };
@@ -29,12 +70,35 @@ class Channel1 {
         u8 m_NR12 { 0 };
         u8 m_NR13 { 0 };
         u8 m_NR14 { 0 };
+
+        bool m_stopped { true };
+        u16 m_duty_timer { 0 };
+        usize m_frequency_timer { 0 };
+        usize m_sweep_timer { 0 };
+        usize m_sweep_counter { 0 };
+        usize m_length_timer { 0 };
+        u8 m_length_counter { 0 };
+        usize m_envelope_timer { 0 };
+        usize m_envelope_counter { 0 };
+        u8 m_envelope_volume { 0 };
+
+        void cycle_frequency();
+        void cycle_sweep();
+        void cycle_length();
+        void cycle_envelope();
+        void restart();
+        inline void reset_length_counter()
+        {
+            m_length_counter = length_counter_base();
+        }
+        inline void reset_envelope()
+        {
+            m_envelope_volume = envelope_base_volume();
+        }
 };
 
 class Channel2 {
     public:
-        explicit Channel2(APU&);
-
         void cycle();
         float sample();
         inline bool stopped() const { return m_stopped; }
@@ -70,8 +134,6 @@ class Channel2 {
         inline u8 envelope_base_volume() const { return (m_NR22 & 0xf0) >> 4; }
 
     private:
-        APU& m_apu;
-
         u8 m_NR21 { 0 };
         u8 m_NR22 { 0 };
         u8 m_NR23 { 0 };
@@ -168,6 +230,16 @@ class APU {
         inline bool channel2_to_right() const { return m_NR51 & 0x02; }
         inline bool channel3_to_right() const { return m_NR51 & 0x04; }
         inline bool channel4_to_right() const { return m_NR51 & 0x08; }
+
+        inline u8 NR10() const { return m_channel1.NR10(); }
+        inline void set_NR10(u8 value) { m_channel1.set_NR10(value); }
+        inline u8 NR11() const { return m_channel1.NR11(); }
+        inline void set_NR11(u8 value) { m_channel1.set_NR11(value); }
+        inline u8 NR12() const { return m_channel1.NR12(); }
+        inline void set_NR12(u8 value) { m_channel1.set_NR12(value); }
+        inline void set_NR13(u8 value) { m_channel1.set_NR13(value); }
+        inline u8 NR14() const { return m_channel1.NR14(); }
+        inline void set_NR14(u8 value) { m_channel1.set_NR14(value); }
 
         inline u8 NR21() const { return m_channel2.NR21(); }
         inline void set_NR21(u8 value) { m_channel2.set_NR21(value); }

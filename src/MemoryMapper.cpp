@@ -255,19 +255,19 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
             break;
 
         case 0x10:
-            fprintf(stderr, "FIXME: implement NR10 write\n");
+            m_emulator.apu().set_NR10(value);
             break;
         case 0x11:
-            fprintf(stderr, "FIXME: implement NR11 write\n");
+            m_emulator.apu().set_NR11(value);
             break;
         case 0x12:
-            fprintf(stderr, "FIXME: implement NR12 write\n");
+            m_emulator.apu().set_NR12(value);
             break;
         case 0x13:
-            fprintf(stderr, "FIXME: implement NR13 write\n");
+            m_emulator.apu().set_NR13(value);
             break;
         case 0x14:
-            fprintf(stderr, "FIXME: implement NR14 write\n");
+            m_emulator.apu().set_NR14(value);
             break;
         case 0x16:
             m_emulator.apu().set_NR21(value);
