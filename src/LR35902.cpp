@@ -230,6 +230,7 @@ void LR35902::do_cycle()
     m_emulator.ppu().cycle();
     m_emulator.joypad().cycle();
     m_emulator.timer().cycle();
+    m_emulator.apu().cycle();
 }
 
 bool LR35902::handle_interrupt()

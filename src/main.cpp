@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     auto filename = argv[1];
     auto rom_data = load_file(filename);
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         fprintf(stderr, "Could not initialize SDL: %s\n", SDL_GetError());
         exit(-1);
     }
@@ -141,10 +141,14 @@ int main(int argc, char** argv) {
                         if (key_event->type == SDL_KEYDOWN) {
                             if (key_event->keysym.sym == SDLK_n)
                                 emulator.step();
-                            if (key_event->keysym.sym == SDLK_c)
+                            if (key_event->keysym.sym == SDLK_c) {
                                 run = true;
-                            if (key_event->keysym.sym == SDLK_x)
+                                emulator.apu().unpause();
+                            }
+                            if (key_event->keysym.sym == SDLK_x) {
                                 run = false;
+                                emulator.apu().pause();
+                            }
                             if (key_event->keysym.sym == SDLK_b) {
                                 printf(
                                         "joypad=%02x\n",

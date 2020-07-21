@@ -8,6 +8,7 @@ Emulator::Emulator(Cart* cart, SDL_Texture* screen)
     : m_mmu(*this, cart)
     , m_cpu(*this)
     , m_ppu(*this, screen)
+    , m_apu(*this)
     , m_joypad(*this)
     , m_timer(*this)
 {

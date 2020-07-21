@@ -7,6 +7,7 @@
 #include "PPU.hpp"
 #include "Joypad.hpp"
 #include "Timer.hpp"
+#include "APU.hpp"
 
 #include <SDL2/SDL.h>
 
@@ -22,6 +23,7 @@ class Emulator {
         inline LR35902& cpu() { return m_cpu; }
         inline MemoryMapper& mmu() { return m_mmu; }
         inline PPU& ppu() { return m_ppu; }
+        inline APU& apu() { return m_apu; }
         inline Joypad& joypad() { return m_joypad; }
         inline Timer& timer() { return m_timer; }
 
@@ -31,6 +33,7 @@ class Emulator {
         MemoryMapper m_mmu;
         LR35902 m_cpu;
         PPU m_ppu;
+        APU m_apu;
         Joypad m_joypad;
         Timer m_timer;
 
