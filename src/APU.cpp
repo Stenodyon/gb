@@ -43,6 +43,7 @@ void APU::cycle()
 {
     m_channel1.cycle();
     m_channel2.cycle();
+    m_channel3.cycle();
 
     m_cycle_counter += 1000;
 
@@ -89,8 +90,14 @@ void APU::sample_audio()
     float left_output = 0.0;
     float right_output = 0.0;
 
+#if 1
     float channel1_sample = m_channel1.sample();
     float channel2_sample = m_channel2.sample();
+#else
+    float channel1_sample = 0.0;
+    float channel2_sample = 0.0;
+#endif
+    float channel3_sample = m_channel3.sample();
 
     if (channel1_to_left())
         left_output += channel1_sample;
@@ -100,6 +107,10 @@ void APU::sample_audio()
         left_output += channel2_sample;
     if (channel2_to_right())
         right_output += channel2_sample;
+    if (channel3_to_left())
+        left_output += channel3_sample;
+    if (channel3_to_right())
+        right_output += channel3_sample;
 
     left_output *= left_volume() * BASE_VOLUME;
     right_output *= right_volume() * BASE_VOLUME;
@@ -292,6 +303,64 @@ float Channel2::sample()
 
     auto volume = (float)(m_envelope_volume & 0xf) / (float)0xf;
     return volume * (float)DUTIES[duty()][m_frequency_timer];
+}
+
+void Channel3::cycle()
+{
+    ++m_frequency_timer;
+    if (m_frequency_timer >= period()) {
+        m_frequency_timer = 0;
+        cycle_frequency();
+    }
+
+    ++m_length_timer;
+    if (m_length_timer >= CYCLES_PER_LENGTH_TICK) {
+        m_length_timer = 0;
+        if (m_length_counter != 0)
+            cycle_length();
+    }
+}
+
+void Channel3::cycle_frequency()
+{
+    m_wave_position = (m_wave_position + 1) & 0x1f;
+}
+
+void Channel3::cycle_length()
+{
+    --m_length_counter;
+
+    if (m_length_counter == 0) {
+        if (!stop_after_length())
+            reset_length_counter();
+        else
+            stop();
+    }
+}
+
+void Channel3::restart()
+{
+    reset_length_counter();
+    m_stopped = false;
+}
+
+float Channel3::sample()
+{
+    if (stopped())
+        return 0.0;
+
+    if (!playing())
+        return 0.0;
+
+    if (output_level() == 0)
+        return 0.0;
+
+    u8 sample_byte = m_wave_pattern[m_wave_position >> 1];
+    u8 sample_value = (m_wave_position & 1)
+        ? ((sample_byte & 0xf0) >> 4)
+        : (sample_byte & 0x0f);
+    float sample = (float)(sample_value >> (output_level() - 1)) / (float)0xf;
+    return sample;
 }
 
 

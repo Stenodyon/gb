@@ -54,6 +54,8 @@ class PPU {
         inline u8 scroll_x_reg() const { return m_scroll_x; }
         inline void set_scroll_y(u8 value) { m_scroll_y = value; }
         inline u8 scroll_y_reg() const { return m_scroll_y; }
+        inline u8 window_x() const { return m_window_x; }
+        inline u8 window_y() const { return m_window_y; }
         inline void set_window_x(u8 value) { m_window_x = value; }
         inline void set_window_y(u8 value) { m_window_y = value; }
         inline void set_ly_compare(u8 value) { m_ly_compare = value; }

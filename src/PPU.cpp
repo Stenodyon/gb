@@ -156,8 +156,7 @@ u8 PPU::background_color_at(u8 x, u8 y)
 
     auto* data = bg_tile_data(tile_index);
     auto color_index = data->color_at(x % 8, y % 8);
-    auto* palette = reinterpret_cast<Palette*>(&m_bg_palette);
-    return palette->color_for(color_index);
+    return color_index;
 }
 
 u8 PPU::window_color_at(u8 x, u8 y)
@@ -172,8 +171,7 @@ u8 PPU::window_color_at(u8 x, u8 y)
 
     auto* data = bg_tile_data(tile_index);
     auto color_index = data->color_at(x % 8, y % 8);
-    auto* palette = reinterpret_cast<Palette*>(&m_bg_palette);
-    return palette->color_for(color_index);
+    return color_index;
 }
 
 bool PPU::inside_window(u8 x, u8 y)

@@ -37,6 +37,7 @@ class CartHeader {
         MBCTypes::Type mbc_type() const;
 
         usize rom_bank_count() const;
+        usize rom_bank_mask() const;
         usize ram_bank_count() const;
         bool has_ram() const;
         bool checksum_header() const;
@@ -69,8 +70,10 @@ class MemoryBankController {
 
         virtual ~MemoryBankController() {}
 
-        virtual u8 read8(u16) = 0;
-        virtual void write8(u16, u8) = 0;
+        virtual u8 read8_rom(u16) = 0;
+        virtual u8 read8_ram(u16) = 0;
+        virtual void write8_rom(u16, u8) = 0;
+        virtual void write8_ram(u16, u8) = 0;
 };
 
 class NoBanking : public MemoryBankController {
@@ -78,18 +81,16 @@ class NoBanking : public MemoryBankController {
         explicit NoBanking(const u8*);
         ~NoBanking();
 
-        virtual u8 read8(u16) override;
-        virtual void write8(u16, u8) override;
+        virtual u8 read8_rom(u16) override;
+        virtual u8 read8_ram(u16) override;
+        virtual void write8_rom(u16, u8) override;
+        virtual void write8_ram(u16, u8) override;
 
     protected:
-        virtual u8 read8_rom(u16);
-        virtual u8 read8_ram(u16);
-        virtual void write8_rom(u16, u8);
-        virtual void write8_ram(u16, u8);
-
         const u8* m_rom;
-        usize m_ram_size = 0;
-        u8* m_ram = nullptr;
+        usize m_rom_size { 0 };
+        usize m_ram_size { 0 };
+        u8* m_ram { nullptr };
 };
 
 class MBC1 : public NoBanking {
@@ -97,14 +98,14 @@ class MBC1 : public NoBanking {
         explicit MBC1(const u8*);
         ~MBC1();
 
-    private:
-        inline usize rom_bank_base() { return m_rom_bank * ROM_BANK_SIZE; }
-        inline usize ram_bank_base() { return m_ram_bank * RAM_BANK_SIZE; }
-
         virtual u8 read8_rom(u16) override;
         virtual u8 read8_ram(u16) override;
         virtual void write8_rom(u16, u8) override;
         virtual void write8_ram(u16, u8) override;
+
+    protected:
+        inline usize rom_bank_base() { return m_rom_bank * ROM_BANK_SIZE; }
+        inline usize ram_bank_base() { return m_ram_bank * RAM_BANK_SIZE; }
 
         enum BankingMode {
             ROM_BANKING,
@@ -113,8 +114,40 @@ class MBC1 : public NoBanking {
 
         bool m_ram_enabled { false };
         BankingMode m_banking_mode { ROM_BANKING };
+        usize m_rom_bank_mask { 0xffff };
         u8 m_rom_bank { 1 };
         u8 m_ram_bank { 0 };
+};
+
+class MBC2 : public NoBanking {
+    public:
+        explicit MBC2(const u8*);
+        ~MBC2();
+
+        virtual u8 read8_rom(u16) override;
+        virtual u8 read8_ram(u16) override;
+        virtual void write8_rom(u16, u8) override;
+        virtual void write8_ram(u16, u8) override;
+
+    private:
+        static const usize RAM_SIZE = 512;
+        inline usize rom_bank_base() { return m_rom_bank * ROM_BANK_SIZE; }
+
+        bool m_ram_enabled { false };
+        usize m_rom_bank_mask { 0xffff };
+        usize m_rom_bank { 1 };
+};
+
+class MBC3 : public MBC1 {
+    public:
+        explicit MBC3(const u8*);
+        ~MBC3();
+
+        virtual u8 read8_ram(u16) override;
+        virtual void write8_rom(u16, u8) override;
+        virtual void write8_ram(u16, u8) override;
+
+    private:
 };
 
 class Cart {
@@ -124,8 +157,10 @@ class Cart {
 
         const u8* data() const { return m_data; }
 
-        u8 read8(u16 address) { return m_mbc->read8(address); }
-        void write8(u16 address, u8 value) { m_mbc->write8(address, value); }
+        u8 read8_rom(u16 address) { return m_mbc->read8_rom(address); }
+        void write8_rom(u16 address, u8 value) { m_mbc->write8_rom(address, value); }
+        u8 read8_ram(u16 address) { return m_mbc->read8_ram(address); }
+        void write8_ram(u16 address, u8 value) { m_mbc->write8_ram(address, value); }
 
         const CartHeader& header() const { return m_header; }
 

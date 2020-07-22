@@ -27,10 +27,8 @@ void Joypad::cycle()
         (buttons_selected() && m_start_pressed)
         || (directions_selected() && m_down_pressed) ? 0 : 0x8;
 
-    if ((prev_value & 0x0f) != (m_joypad_reg & 0x0f)) {
-        printf("Joypad register change: %02x\n", m_joypad_reg);
+    if ((prev_value & 0x0f) != (m_joypad_reg & 0x0f))
         m_emulator.cpu().request_joypad_interrupt();
-    }
 }
 
 void Joypad::set_button_status(Buttons::Button button, bool pressed)

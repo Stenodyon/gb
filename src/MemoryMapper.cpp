@@ -48,13 +48,13 @@ void MemoryMapper::dma_copy(u8 sector, u8 offset)
 u8 MemoryMapper::read8_bypass(u16 address)
 {
     if (address < 0x8000)
-        return m_cart->read8(address);
+        return m_cart->read8_rom(address);
 
     if (address < 0xa000)
         return m_emulator.ppu().read8(address - 0x8000);
 
     if (address < 0xc000)
-        return m_cart->read8(address);
+        return m_cart->read8_ram(address - 0xa000);
 
     if (address < 0xe000)
         return m_work_ram[address - 0xc000];
@@ -83,7 +83,7 @@ u8 MemoryMapper::read8_bypass(u16 address)
 void MemoryMapper::write8_bypass(u16 address, u8 value)
 {
     if (address < 0x8000) {
-        m_cart->write8(address, value);
+        m_cart->write8_rom(address, value);
         return;
     }
 
@@ -93,7 +93,7 @@ void MemoryMapper::write8_bypass(u16 address, u8 value)
     }
 
     if (address < 0xc000) {
-        m_cart->write8(address, value);
+        m_cart->write8_ram(address - 0xa000, value);
         return;
     }
 
@@ -151,14 +151,11 @@ u8 MemoryMapper::read_io8(u8 reg)
             return m_emulator.cpu().interrupt_flag();
 
         case 0x11:
-            fprintf(stderr, "FIXME: implement NR11 read\n");
-            return 0;
+            return m_emulator.apu().NR11();
         case 0x12:
-            fprintf(stderr, "FIXME: implement NR12 read\n");
-            return 0;
+            return m_emulator.apu().NR12();
         case 0x14:
-            fprintf(stderr, "FIXME: implement NR14 read\n");
-            return 0;
+            return m_emulator.apu().NR14();
         case 0x16:
             return m_emulator.apu().NR21();
         case 0x17:
@@ -166,14 +163,11 @@ u8 MemoryMapper::read_io8(u8 reg)
         case 0x19:
             return m_emulator.apu().NR24();
         case 0x1a:
-            fprintf(stderr, "FIXME: implement NR30 read\n");
-            return 0;
+            return m_emulator.apu().NR30();
         case 0x1c:
-            fprintf(stderr, "FIXME: implement NR32 read\n");
-            return 0;
+            return m_emulator.apu().NR32();
         case 0x1e:
-            fprintf(stderr, "FIXME: implement NR34 read\n");
-            return 0;
+            return m_emulator.apu().NR34();
         case 0x21:
             fprintf(stderr, "FIXME: implement NR42 read\n");
             return 0;
@@ -184,11 +178,9 @@ u8 MemoryMapper::read_io8(u8 reg)
             fprintf(stderr, "FIXME: implement NR50 read\n");
             return 0;
         case 0x25:
-            fprintf(stderr, "FIXME: implement NR51 read\n");
-            return 0;
+            return m_emulator.apu().NR51();
         case 0x26:
-            fprintf(stderr, "FIXME: implement NR52 read\n");
-            return 0;
+            return m_emulator.apu().NR52();
 
         case 0x40: // LCD Control
             return m_emulator.ppu().control_reg();
@@ -198,6 +190,10 @@ u8 MemoryMapper::read_io8(u8 reg)
             return m_emulator.ppu().line_y();
         case 0x47: // BGP - Background Palette Data
             return m_emulator.ppu().bg_palette_reg();
+        case 0x4a: // WY - Window Y
+            return m_emulator.ppu().window_y();
+        case 0x4b: // WX - Window X
+            return m_emulator.ppu().window_x();
 
         case 0x42: // SCY - Scroll Y
             return m_emulator.ppu().scroll_y_reg();
@@ -282,19 +278,19 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
             m_emulator.apu().set_NR24(value);
             break;
         case 0x1a:
-            fprintf(stderr, "FIXME: implement NR30 write\n");
+            m_emulator.apu().set_NR30(value);
             break;
         case 0x1b:
-            fprintf(stderr, "FIXME: implement NR31 write\n");
+            m_emulator.apu().set_NR31(value);
             break;
         case 0x1c:
-            fprintf(stderr, "FIXME: implement NR32 write\n");
+            m_emulator.apu().set_NR32(value);
             break;
         case 0x1d:
-            fprintf(stderr, "FIXME: implement NR33 write\n");
+            m_emulator.apu().set_NR33(value);
             break;
         case 0x1e:
-            fprintf(stderr, "FIXME: implement NR34 write\n");
+            m_emulator.apu().set_NR34(value);
             break;
         case 0x20:
             fprintf(stderr, "FIXME: implement NR41 write\n");
@@ -334,7 +330,7 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
         case 0x3d:
         case 0x3e:
         case 0x3f:
-            fprintf(stderr, "FIXME: implement Wave Pattern RAM write\n");
+            m_emulator.apu().set_wave_pattern(value, reg & 0x0f);
             break;
 
         case 0x40: // LCD Control
@@ -348,6 +344,9 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
             break;
         case 0x43: // SCX - Scroll X
             m_emulator.ppu().set_scroll_x(value);
+            break;
+        case 0x44: // LY - LCDC Y-Coordinate
+            fprintf(stderr, "WARNING: Writing to read-only io register FF44\n");
             break;
         case 0x45: // LYC - LY Compare
             m_emulator.ppu().set_ly_compare(value);

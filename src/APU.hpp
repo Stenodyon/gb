@@ -164,6 +164,43 @@ class Channel2 {
 
 class Channel3 {
     public:
+        void cycle();
+        float sample();
+        inline void stop() { m_stopped = true; }
+        inline bool stopped() const { return m_stopped; }
+
+        inline u8 NR30() const { return m_NR30 | 0x7f; }
+        inline void set_NR30(u8 value) { m_NR30 = value; }
+        inline void set_NR31(u8 value) { m_NR31 = value; }
+        inline u8 NR32() const { return m_NR32 | 0x9f; }
+        inline void set_NR32(u8 value) { m_NR32 = value; }
+        inline void set_NR33(u8 value) { m_NR33 = value; }
+        inline u8 NR34() const { return (m_NR34 & 0x40) | 0xbf; }
+        inline void set_NR34(u8 value)
+        {
+            m_NR34 = value;
+            if (m_NR34 & 0x80)
+                restart();
+        }
+        inline void set_wave_pattern(u8 value, u8 offset)
+        {
+            if (playing())
+                m_wave_pattern[m_wave_position] = value; // DMG quirk
+            else
+                m_wave_pattern[offset] = value;
+        }
+
+        inline bool playing() const { return m_NR30 & 0x80; }
+        inline u8 sound_length() const { return 256 - m_NR31; }
+        inline u8 output_level() const { return (m_NR32 & 0x60) >> 5; }
+        inline u16 frequency() const
+        {
+            return ((u16)(m_NR34 & 0b111) << 8) | (u16)m_NR33;
+        }
+        inline u16 period() const { return (2048 - frequency()) * 2; }
+        inline bool stop_after_length() const { return m_NR34 & 0x40; }
+        inline void reset_length_counter() { m_length_counter = sound_length(); }
+
     private:
         u8 m_NR30 { 0 };
         u8 m_NR31 { 0 };
@@ -171,6 +208,16 @@ class Channel3 {
         u8 m_NR33 { 0 };
         u8 m_NR34 { 0 };
         u8 m_wave_pattern[0x10];
+
+        bool m_stopped { true };
+        usize m_frequency_timer { 0 };
+        usize m_wave_position { 0 };
+        usize m_length_timer { 0 };
+        usize m_length_counter { 0 };
+
+        void cycle_frequency();
+        void cycle_length();
+        void restart();
 };
 
 class Channel4 {
@@ -203,7 +250,9 @@ class APU {
         inline u8 NR52() const
         {
             return m_NR52
+                | (m_channel1.stopped() ? 0 : 0x01)
                 | (m_channel2.stopped() ? 0 : 0x02)
+                | (m_channel3.stopped() ? 0 : 0x04)
                 | 0x70;
         }
         inline void set_NR52(u8 value) { m_NR52 = (m_NR52 & 0x7f) | (value & 0x80); }
@@ -248,6 +297,19 @@ class APU {
         inline void set_NR23(u8 value) { m_channel2.set_NR23(value); }
         inline u8 NR24() const { return m_channel2.NR24(); }
         inline void set_NR24(u8 value) { m_channel2.set_NR24(value); }
+
+        inline u8 NR30() const { return m_channel3.NR30(); }
+        inline void set_NR30(u8 value) { m_channel3.set_NR30(value); }
+        inline void set_NR31(u8 value) { m_channel3.set_NR31(value); }
+        inline u8 NR32() const { return m_channel3.NR32(); }
+        inline void set_NR32(u8 value) { m_channel3.set_NR32(value); }
+        inline void set_NR33(u8 value) { m_channel3.set_NR33(value); }
+        inline u8 NR34() const { return m_channel3.NR34(); }
+        inline void set_NR34(u8 value) { m_channel3.set_NR34(value); }
+        inline void set_wave_pattern(u8 value, u8 offset)
+        {
+            m_channel3.set_wave_pattern(value, offset);
+        }
 
     private:
         Emulator& m_emulator;
