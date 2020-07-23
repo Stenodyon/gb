@@ -35,6 +35,7 @@ class PPU {
         };
 
         inline u8 line_y() const { return m_pixel_y; }
+        void set_line_y(u8 value);
         inline u8 control_reg() const { return m_control_reg; }
         inline u8 status_reg() const
         {
@@ -58,6 +59,7 @@ class PPU {
         inline u8 window_y() const { return m_window_y; }
         inline void set_window_x(u8 value) { m_window_x = value; }
         inline void set_window_y(u8 value) { m_window_y = value; }
+        inline u8 ly_compare() const { return m_ly_compare; }
         inline void set_ly_compare(u8 value) { m_ly_compare = value; }
 
         inline u8 bg_palette_reg() const { return m_bg_palette; }
@@ -71,42 +73,46 @@ class PPU {
         inline bool window_display_enabled() const { return m_control_reg & 0x20; }
         inline bool sprite_display_enabled() const { return m_control_reg & 0x02; }
         inline bool bg_display_enabled() const { return m_control_reg & 0x01; }
-        inline u16 window_tilemap_base()
+        inline u16 window_tilemap_base() const
         {
             u16 address = (m_control_reg & 0x40) ? 0x9c00 : 0x9800;
             return address - 0x8000;
         }
-        inline u16 bg_tilemap_base()
+        inline u16 bg_tilemap_base() const
         {
             u16 address = (m_control_reg & 0x08) ? 0x9c00 : 0x9800;
             return address - 0x8000;
         }
-        inline bool tiled_data_signed_addressing()
+        inline bool tiled_data_signed_addressing() const
         {
             return (m_control_reg & 0x10) == 0;
         }
-        inline u16 tile_data_base()
+        inline u16 tile_data_base() const
         {
             u16 address = tiled_data_signed_addressing() ? 0x8800 : 0x8000;
             return address - 0x8000;
         }
-        inline bool sprite_double_height()
+        inline bool sprite_double_height() const
         {
             return (m_control_reg & 0x04) != 0;
         }
-        inline usize sprite_height()
+        inline usize sprite_height() const
         {
             return (m_control_reg & 0x04) ? 16 : 8;
         }
-        inline bool hblank_interrupt_enabled()
+        inline bool coincidence_interrupt_enabled() const
+        {
+            return (m_status_reg & 0x40) != 0;
+        }
+        inline bool hblank_interrupt_enabled() const
         {
             return (m_status_reg & 0x08) != 0;
         }
-        inline bool vblank_interrupt_enabled()
+        inline bool vblank_interrupt_enabled() const
         {
             return (m_status_reg & 0x10) != 0;
         }
-        inline bool oam_interrupt_enabled()
+        inline bool oam_interrupt_enabled() const
         {
             return (m_status_reg & 0x20) != 0;
         }

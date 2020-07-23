@@ -190,6 +190,8 @@ u8 MemoryMapper::read_io8(u8 reg)
             return m_emulator.ppu().status_reg();
         case 0x44: // LY - LCDC Y-Coordinate
             return m_emulator.ppu().line_y();
+        case 0x45: // LYC - LY Compare
+            return m_emulator.ppu().ly_compare();
         case 0x47: // BGP - Background Palette Data
             return m_emulator.ppu().bg_palette_reg();
         case 0x4a: // WY - Window Y

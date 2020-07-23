@@ -100,7 +100,7 @@ void PPU::cycle()
 
             if (m_dot_count == 208) {
                 m_dot_count = 0;
-                ++m_pixel_y;
+                set_line_y(m_pixel_y + 1);
                 m_mode = (m_pixel_y == 144) ? ModeFlag::VBLANK : ModeFlag::OAM;
             }
             break;
@@ -116,11 +116,11 @@ void PPU::cycle()
             }
 
             if (m_dot_count % 456 == 0) {
-                ++m_pixel_y;
+                set_line_y(m_pixel_y + 1);
             }
             if (m_dot_count == 4560) {
                 m_dot_count = 0;
-                m_pixel_y = 0;
+                set_line_y(0);
                 m_mode = ModeFlag::OAM;
             }
             break;
@@ -128,6 +128,14 @@ void PPU::cycle()
         default:
             assert(false); // unreachable
     }
+}
+
+void PPU::set_line_y(u8 value)
+{
+    m_pixel_y = value;
+
+    if (coincidence_interrupt_enabled() && m_pixel_y == m_ly_compare)
+        m_emulator.cpu().request_LCD_interrupt();
 }
 
 u8 PPU::TileData::color_at(usize x, usize y)
@@ -149,7 +157,7 @@ u8 PPU::background_color_at(u8 x, u8 y)
     auto tile_x = x >> 3;
     auto tile_y = y >> 3;
     auto tile_offset = tile_x + tile_y * 32;
-    auto tile_index = m_vram[bg_tilemap_base() + tile_offset];
+    u8 tile_index = m_vram[bg_tilemap_base() + tile_offset];
 
     if (tiled_data_signed_addressing())
         tile_index += 128;
@@ -164,7 +172,7 @@ u8 PPU::window_color_at(u8 x, u8 y)
     auto tile_x = x >> 3;
     auto tile_y = y >> 3;
     auto tile_offset = tile_x + tile_y * 32;
-    auto tile_index = m_vram[window_tilemap_base() + tile_offset];
+    u8 tile_index = m_vram[window_tilemap_base() + tile_offset];
 
     if (tiled_data_signed_addressing())
         tile_index += 128;
