@@ -30,7 +30,6 @@ class Timer {
     private:
         Emulator& m_emulator;
 
-        usize m_divider_timer { 0 };
         u16 m_divider { 0 };
         u8 m_timer_counter { 0 };
         u8 m_timer_modulo { 0 };

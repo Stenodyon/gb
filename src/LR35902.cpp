@@ -239,10 +239,19 @@ void LR35902::do_cycle()
 
 bool LR35902::handle_interrupt()
 {
-    if (!m_interrupts_enabled)
+    if (!m_interrupts_enabled && !m_halted)
         return false;
 
     u8 triggerable_interrupts = m_interrupt_enable_reg & m_interrupt_flag_reg;
+
+    if (triggerable_interrupts == 0)
+        return false;
+
+    if (m_halted)
+        m_halted = false;
+
+    if (!m_interrupts_enabled)
+        return false;
 
     if ((triggerable_interrupts & 0x01) > 0) { // VBLANK
         m_halted = false;
@@ -325,47 +334,71 @@ void LR35902::RST00H(const Instruction&)
 {
     push16(PC());
     setPC(0x0000);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 void LR35902::RST10H(const Instruction&)
 {
     push16(PC());
     setPC(0x0010);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RST20H(const Instruction&)
 {
     push16(PC());
     setPC(0x0020);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RST30H(const Instruction&)
 {
     push16(PC());
     setPC(0x0030);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RST08H(const Instruction&)
 {
     push16(PC());
     setPC(0x0008);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RST18H(const Instruction&)
 {
     push16(PC());
     setPC(0x0018);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RST28H(const Instruction&)
 {
     push16(PC());
     setPC(0x0028);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RST38H(const Instruction&)
 {
     push16(PC());
     setPC(0x0038);
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::LD_r8_r8(const Instruction& ins)
@@ -382,6 +415,7 @@ void LR35902::LD_r8_iHL(const Instruction& ins)
 {
     u8 value = m_emulator.mmu().read8(regHL());
     set_reg8(ins.dst_reg8(), value);
+    do_cycle();
 }
 
 void LR35902::LD_r16_imm16(const Instruction& ins)
@@ -393,6 +427,7 @@ void LR35902::LD_ir16_A(const Instruction& ins)
 {
     u16 address = reg16(ins.dst_reg16());
     m_emulator.mmu().write8(address, regA());
+    do_cycle();
 }
 
 void LR35902::LD_iimm16_SP(const Instruction& ins)
@@ -400,6 +435,8 @@ void LR35902::LD_iimm16_SP(const Instruction& ins)
     u16 address = ins.imm16();
     m_emulator.mmu().write8(address, SP() & 0xff);
     m_emulator.mmu().write8(address + 1, SP() >> 8);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::LD_HLinc_A(const Instruction&)
@@ -419,11 +456,13 @@ void LR35902::LD_HLdec_A(const Instruction&)
 void LR35902::LD_iHL_imm8(const Instruction& ins)
 {
     m_emulator.mmu().write8(regHL(), ins.imm8());
+    do_cycle();
 }
 
 void LR35902::LD_iHL_r8(const Instruction& ins)
 {
     m_emulator.mmu().write8(regHL(), reg8(ins.src_reg8()));
+    do_cycle();
 }
 
 void LR35902::LD_A_ir16(const Instruction& ins)
@@ -431,6 +470,7 @@ void LR35902::LD_A_ir16(const Instruction& ins)
     u16 address = reg16(ins.dst_reg16());
     u8 value = m_emulator.mmu().read8(address);
     setA(value);
+    do_cycle();
 }
 
 void LR35902::LD_A_HLinc(const Instruction&)
@@ -438,6 +478,7 @@ void LR35902::LD_A_HLinc(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     setA(value);
     setHL(regHL() + 1);
+    do_cycle();
 }
 
 void LR35902::LD_A_HLdec(const Instruction&)
@@ -445,24 +486,28 @@ void LR35902::LD_A_HLdec(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     setA(value);
     setHL(regHL() - 1);
+    do_cycle();
 }
 
 void LR35902::LDH_iimm8_A(const Instruction& ins)
 {
     u16 address = 0xff00 | (u16)ins.imm8();
     m_emulator.mmu().write8(address, regA());
+    do_cycle();
 }
 
 void LR35902::LDH_A_iimm8(const Instruction& ins)
 {
     u16 address = 0xff00 | (u16)ins.imm8();
     setA(m_emulator.mmu().read8(address));
+    do_cycle();
 }
 
 void LR35902::LDH_iC_A(const Instruction&)
 {
     u16 address = 0xff00 | (u16)regC();
     m_emulator.mmu().write8(address, regA());
+    do_cycle();
 }
 
 void LR35902::LDH_A_iC(const Instruction&)
@@ -470,6 +515,7 @@ void LR35902::LDH_A_iC(const Instruction&)
     u16 address = 0xff00 | (u16)regC();
     u8 value = m_emulator.mmu().read8(address);
     setA(value);
+    do_cycle();
 }
 
 void LR35902::LD_HL_SP_imm8(const Instruction& ins)
@@ -483,31 +529,40 @@ void LR35902::LD_HL_SP_imm8(const Instruction& ins)
     set_NF(false);
     set_HF(((SP() & 0x0f) + (imm8 & 0x0f)) & 0x10);
     set_CF(((SP() & 0x00ff) + imm8) & 0x100);
+    do_cycle();
 }
 
 void LR35902::LD_SP_HL(const Instruction&)
 {
     setSP(regHL());
+    do_cycle();
 }
 
 void LR35902::LD_iimm16_A(const Instruction& ins)
 {
     m_emulator.mmu().write8(ins.imm16(), regA());
+    do_cycle();
 }
 
 void LR35902::LD_A_iimm16(const Instruction& ins)
 {
     setA(m_emulator.mmu().read8(ins.imm16()));
+    do_cycle();
 }
 
 void LR35902::PUSH_r16(const Instruction& ins)
 {
     push16(reg16(ins.dst_reg16()));
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::POP_r16(const Instruction& ins)
 {
     set_reg16(ins.dst_reg16(), pop16());
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::INC(u8& value)
@@ -532,11 +587,14 @@ void LR35902::INC_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     INC(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::INC_r16(const Instruction& ins)
 {
     set_reg16(ins.dst_reg16(), reg16(ins.dst_reg16()) + 1);
+    do_cycle();
 }
 
 void LR35902::DEC(u8& value)
@@ -561,12 +619,15 @@ void LR35902::DEC_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     DEC(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::DEC_r16(const Instruction& ins)
 {
     u16 value = reg16(ins.dst_reg16()) - 1;
     set_reg16(ins.dst_reg16(), value);
+    do_cycle();
 }
 
 void LR35902::ADD_HL_r16(const Instruction& ins)
@@ -579,6 +640,7 @@ void LR35902::ADD_HL_r16(const Instruction& ins)
     set_NF(false);
     set_HF(((prevHL & 0x0fff) + (value & 0x0fff)) & 0x1000);
     set_CF(result < prevHL);
+    do_cycle();
 }
 
 void LR35902::ADD_SP_imm8(const Instruction& ins)
@@ -592,6 +654,8 @@ void LR35902::ADD_SP_imm8(const Instruction& ins)
     set_NF(false);
     set_HF(((prev_SP & 0x0f) + (imm8 & 0x0f)) & 0x10);
     set_CF(((prev_SP & 0x00ff) + imm8) & 0x100);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::ADD(u8 value)
@@ -620,6 +684,7 @@ void LR35902::ADD_iHL(const Instruction&)
 {
     u8 value = m_emulator.mmu().read8(regHL());
     ADD(value);
+    do_cycle();
 }
 
 void LR35902::ADC(u8 value)
@@ -648,6 +713,7 @@ void LR35902::ADC_imm8(const Instruction& ins)
 void LR35902::ADC_iHL(const Instruction&)
 {
     ADC(m_emulator.mmu().read8(regHL()));
+    do_cycle();
 }
 
 void LR35902::SUB(u8 value)
@@ -675,6 +741,7 @@ void LR35902::SUB_imm8(const Instruction& ins)
 void LR35902::SUB_iHL(const Instruction&)
 {
     SUB(m_emulator.mmu().read8(regHL()));
+    do_cycle();
 }
 
 void LR35902::SBC(u8 value)
@@ -703,6 +770,7 @@ void LR35902::SBC_imm8(const Instruction& ins)
 void LR35902::SBC_iHL(const Instruction&)
 {
     SBC(m_emulator.mmu().read8(regHL()));
+    do_cycle();
 }
 
 void LR35902::AND(u8 value)
@@ -729,6 +797,7 @@ void LR35902::AND_imm8(const Instruction& ins)
 void LR35902::AND_iHL(const Instruction&)
 {
     AND(m_emulator.mmu().read8(regHL()));
+    do_cycle();
 }
 
 void LR35902::XOR(u8 value)
@@ -756,6 +825,7 @@ void LR35902::XOR_iHL(const Instruction&)
 {
     u8 value = m_emulator.mmu().read8(regHL());
     XOR(value);
+    do_cycle();
 }
 
 void LR35902::OR(u8 value)
@@ -783,6 +853,7 @@ void LR35902::OR_iHL(const Instruction&)
 {
     u8 value = m_emulator.mmu().read8(regHL());
     OR(value);
+    do_cycle();
 }
 
 void LR35902::CP(u8 value)
@@ -806,6 +877,7 @@ void LR35902::CP_imm8(const Instruction& ins)
 void LR35902::CP_iHL(const Instruction&)
 {
     CP(m_emulator.mmu().read8(regHL()));
+    do_cycle();
 }
 
 void LR35902::RLCA(const Instruction&)
@@ -892,12 +964,15 @@ void LR35902::CCF(const Instruction&)
 void LR35902::JP(const Instruction& ins)
 {
     setPC(ins.imm16());
+    do_cycle();
 }
 
 void LR35902::JP_cond(const Instruction& ins)
 {
-    if (check_condition(ins.condition()))
+    if (check_condition(ins.condition())) {
         setPC(ins.imm16());
+        do_cycle();
+    }
 }
 
 void LR35902::JP_iHL(const Instruction&)
@@ -931,6 +1006,9 @@ void LR35902::CALL(const Instruction& ins)
 {
     push16(PC());
     setPC(ins.imm16());
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::CALL_cond(const Instruction& ins)
@@ -938,18 +1016,28 @@ void LR35902::CALL_cond(const Instruction& ins)
     if (check_condition(ins.condition())) {
         push16(PC());
         setPC(ins.imm16());
+        do_cycle();
+        do_cycle();
+        do_cycle();
     }
 }
 
 void LR35902::RET(const Instruction&)
 {
     setPC(pop16());
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RET_cond(const Instruction& ins)
 {
+    do_cycle();
     if (check_condition(ins.condition())) {
         setPC(pop16());
+        do_cycle();
+        do_cycle();
+        do_cycle();
     }
 }
 
@@ -957,6 +1045,9 @@ void LR35902::RETI(const Instruction&)
 {
     m_interrupts_enabled = true;
     setPC(pop16());
+    do_cycle();
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RLC(u8& value)
@@ -982,6 +1073,8 @@ void LR35902::RLC_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     RLC(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RRC(u8& value)
@@ -1007,6 +1100,8 @@ void LR35902::RRC_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     RRC(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RL(u8& value)
@@ -1032,6 +1127,8 @@ void LR35902::RL_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     RL(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::RR(u8& value)
@@ -1057,6 +1154,8 @@ void LR35902::RR_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     RR(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::SLA(u8& value)
@@ -1082,6 +1181,8 @@ void LR35902::SLA_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     SLA(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::SRA(u8& value)
@@ -1108,6 +1209,8 @@ void LR35902::SRA_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     SRA(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::SWAP(u8& value)
@@ -1134,6 +1237,8 @@ void LR35902::SWAP_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     SWAP(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::SRL(u8& value)
@@ -1159,6 +1264,8 @@ void LR35902::SRL_iHL(const Instruction&)
     u8 value = m_emulator.mmu().read8(regHL());
     SRL(value);
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::BIT(u8 value, u8 bit)
@@ -1182,6 +1289,7 @@ void LR35902::BIT_iHL(const Instruction& ins)
     u8 value = m_emulator.mmu().read8(regHL());
     BIT(value, ins.special_bit());
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
 }
 
 void LR35902::RES(u8& value, u8 bit)
@@ -1202,6 +1310,8 @@ void LR35902::RES_iHL(const Instruction& ins)
     u8 value = m_emulator.mmu().read8(regHL());
     RES(value, ins.special_bit());
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 void LR35902::SET(u8& value, u8 bit)
@@ -1221,6 +1331,8 @@ void LR35902::SET_iHL(const Instruction& ins)
     u8 value = m_emulator.mmu().read8(regHL());
     SET(value, ins.special_bit());
     m_emulator.mmu().write8(regHL(), value);
+    do_cycle();
+    do_cycle();
 }
 
 } // namespace GB

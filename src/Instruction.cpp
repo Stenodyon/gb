@@ -781,6 +781,9 @@ std::string Instruction::to_string() const
         case OP_A_iC:
             out << "A, (C)";
             break;
+        case OP_HL_SP_imm8:
+            out << " HL, SP + " << format_u8(imm8());
+            break;
 
         default:
             fprintf(

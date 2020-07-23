@@ -144,6 +144,8 @@ u8 MemoryMapper::read_io8(u8 reg)
 
         case 0x04: // DIV - Divider Register
             return m_emulator.timer().divider();
+        case 0x05: // TIMA - Timer Counter
+            return m_emulator.timer().counter();
         case 0x07: // TAC - Timer Control
             return m_emulator.timer().control();
 
