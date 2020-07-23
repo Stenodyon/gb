@@ -11,16 +11,22 @@ Timer::Timer(Emulator& emulator)
 
 void Timer::cycle()
 {
-    bool timer_inc_bit = (m_divider & clock_select_mask()) != 0;
-    ++m_divider;
-    bool new_timer_inc_bit = (m_divider & clock_select_mask()) != 0;
+    ++m_divider_timer;
 
-    if (timer_enabled() && new_timer_inc_bit && !timer_inc_bit) {
-        if (m_timer_counter == 0xff) {
-            m_timer_counter = m_timer_modulo;
-            m_emulator.cpu().request_timer_interrupt();
-        } else {
-            ++m_timer_counter;
+    if (m_divider_timer == 256) {
+        m_divider_timer = 0;
+        bool timer_inc_bit = (m_divider & clock_select_mask()) != 0;
+        ++m_divider;
+        bool new_timer_inc_bit = (m_divider & clock_select_mask()) != 0;
+        bool timer_inc_bit_changed = !timer_inc_bit && new_timer_inc_bit;
+
+        if (timer_enabled() && timer_inc_bit_changed) {
+            if (m_timer_counter == 0xff) {
+                m_timer_counter = m_timer_modulo;
+                m_emulator.cpu().request_timer_interrupt();
+            } else {
+                ++m_timer_counter;
+            }
         }
     }
 }

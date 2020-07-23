@@ -10,6 +10,8 @@ namespace GB {
 LR35902::LR35902(Emulator& emulator)
     : m_emulator(emulator)
 {
+    // A = 0x11 at startup means CGB/GBA
+    setA(0);
 }
 
 void LR35902::cycle()
@@ -227,10 +229,12 @@ void LR35902::do_cycle()
     if (doing_dma())
         cycle_dma();
 
-    m_emulator.ppu().cycle();
-    m_emulator.joypad().cycle();
-    m_emulator.timer().cycle();
-    m_emulator.apu().cycle();
+    for (usize i = 0; i < 4; ++i) {
+        m_emulator.ppu().cycle();
+        m_emulator.joypad().cycle();
+        m_emulator.timer().cycle();
+        m_emulator.apu().cycle();
+    }
 }
 
 bool LR35902::handle_interrupt()
@@ -477,10 +481,8 @@ void LR35902::LD_HL_SP_imm8(const Instruction& ins)
 
     set_ZF(false);
     set_NF(false);
-    // FIXME: proper half carry flag
-    set_HF(false);
-    // FIXME: compute carry flag
-    set_CF(false);
+    set_HF(((SP() & 0x0f) + (imm8 & 0x0f)) & 0x10);
+    set_CF(((SP() & 0x00ff) + imm8) & 0x100);
 }
 
 void LR35902::LD_SP_HL(const Instruction&)
@@ -510,12 +512,12 @@ void LR35902::POP_r16(const Instruction& ins)
 
 void LR35902::INC(u8& value)
 {
+    u8 prev_value = value;
     ++value;
 
     set_ZF(value == 0);
     set_NF(false);
-    // FIXME: proper half carry flag
-    set_HF(false);
+    set_HF(((prev_value & 0x0f) + 1) & 0x10);
 }
 
 void LR35902::INC_r8(const Instruction& ins)
@@ -539,12 +541,12 @@ void LR35902::INC_r16(const Instruction& ins)
 
 void LR35902::DEC(u8& value)
 {
+    u8 prev_value = value;
     --value;
 
     set_ZF(value == 0);
     set_NF(true);
-    // FIXME: proper half carry flag
-    set_HF(false);
+    set_HF(((prev_value & 0xf) - 1) & 0x10);
 }
 
 void LR35902::DEC_r8(const Instruction& ins)
@@ -570,12 +572,12 @@ void LR35902::DEC_r16(const Instruction& ins)
 void LR35902::ADD_HL_r16(const Instruction& ins)
 {
     u16 prevHL = regHL();
-    u16 result = regHL() + reg16(ins.dst_reg16());
+    u16 value = reg16(ins.dst_reg16());
+    u16 result = regHL() + value;
     setHL(result);
 
     set_NF(false);
-    // FIXME: proper half carry flag
-    set_HF(false);
+    set_HF(((prevHL & 0x0fff) + (value & 0x0fff)) & 0x1000);
     set_CF(result < prevHL);
 }
 
@@ -583,14 +585,13 @@ void LR35902::ADD_SP_imm8(const Instruction& ins)
 {
     auto imm8 = ins.imm8();
     auto signed_value = *reinterpret_cast<i8*>(&imm8);
+    u16 prev_SP = SP();
     setSP(SP() + signed_value);
 
     set_ZF(false);
     set_NF(false);
-    // FIXME: proper half carry flag
-    set_HF(false);
-    // FIXME: compute carry flag
-    set_CF(false);
+    set_HF(((prev_SP & 0x0f) + (imm8 & 0x0f)) & 0x10);
+    set_CF(((prev_SP & 0x00ff) + imm8) & 0x100);
 }
 
 void LR35902::ADD(u8 value)
@@ -601,8 +602,7 @@ void LR35902::ADD(u8 value)
 
     set_ZF(result == 0);
     set_NF(false);
-    // FIXME: proper half carry flag
-    set_HF(false);
+    set_HF(((prev_A & 0x0f) + (value & 0x0f)) & 0x10);
     set_CF(result < prev_A);
 }
 
@@ -631,9 +631,8 @@ void LR35902::ADC(u8 value)
 
     set_ZF(result == 0);
     set_NF(false);
-    // FIXME: proper half carry flag
-    set_HF(false);
-    set_CF(result < prev_A);
+    set_HF(((prev_A & 0x0f) + (value & 0x0f) + carry) & 0x10);
+    set_CF(((usize)prev_A + (usize)value + carry) & 0x100);
 }
 
 void LR35902::ADC_r8(const Instruction& ins)
@@ -659,8 +658,7 @@ void LR35902::SUB(u8 value)
 
     set_ZF(result == 0);
     set_NF(true);
-    // FIXME: proper half carry flag
-    set_HF(false);
+    set_HF(((prevA & 0x0f) - (value & 0x0f)) & 0x10);
     set_CF(value > prevA);
 }
 
@@ -688,9 +686,8 @@ void LR35902::SBC(u8 value)
 
     set_ZF(result == 0);
     set_NF(true);
-    // FIXME: proper half carry flag
-    set_HF(false);
-    set_CF((value + carry) > prevA);
+    set_HF(((prevA & 0x0f) - (value & 0x0f) - carry) & 0x10);
+    set_CF(((usize)value + carry) > prevA);
 }
 
 void LR35902::SBC_r8(const Instruction& ins)
@@ -792,8 +789,7 @@ void LR35902::CP(u8 value)
 {
     set_ZF(regA() == value);
     set_NF(true);
-    // FIXME: proper half carry flag
-    set_HF(false);
+    set_HF(((regA() & 0x0f) - (value & 0x0f)) & 0x10);
     set_CF(regA() < value);
 }
 
@@ -1059,7 +1055,7 @@ void LR35902::RR_r8(const Instruction& ins)
 void LR35902::RR_iHL(const Instruction&)
 {
     u8 value = m_emulator.mmu().read8(regHL());
-    RL(value);
+    RR(value);
     m_emulator.mmu().write8(regHL(), value);
 }
 

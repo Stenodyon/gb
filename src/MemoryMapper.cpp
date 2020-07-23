@@ -205,9 +205,10 @@ u8 MemoryMapper::read_io8(u8 reg)
             return m_emulator.ppu().obj_palette1_reg();
 
             // CGB-Only
+        case 0x4d:
         case 0x55:
             fprintf(stderr, "WARNING: reading from CGB-only register\n");
-            return 0x00;
+            return 0xff;
 
         case 0xff: // IE - Interrupt Enable
             return m_emulator.cpu().interrupt_enable();
@@ -371,6 +372,7 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
             break;
 
             // CGB-Only
+        case 0x4d:
         case 0x4f:
         case 0x51:
         case 0x52:
