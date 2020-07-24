@@ -150,6 +150,26 @@ class MBC3 : public MBC1 {
     private:
 };
 
+class MBC5 : public NoBanking {
+    public:
+        explicit MBC5(const u8*);
+        ~MBC5();
+
+        virtual u8 read8_rom(u16) override;
+        virtual u8 read8_ram(u16) override;
+        virtual void write8_rom(u16, u8) override;
+        virtual void write8_ram(u16, u8) override;
+
+    private:
+        inline usize rom_bank_base() { return m_rom_bank * ROM_BANK_SIZE; }
+        inline usize ram_bank_base() { return m_ram_bank * RAM_BANK_SIZE; }
+
+        bool m_ram_enabled { false };
+        usize m_rom_bank_mask { 0xffff };
+        usize m_rom_bank { 1 };
+        usize m_ram_bank { 0 };
+};
+
 class Cart {
     public:
         explicit Cart(const u8* data);

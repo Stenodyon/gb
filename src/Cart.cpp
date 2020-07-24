@@ -283,6 +283,8 @@ MemoryBankController* MemoryBankController::create(const u8* data) {
             return new MBC2(data);
         case MBCTypes::MBC3:
             return new MBC3(data);
+        case MBCTypes::MBC5:
+            return new MBC5(data);
 
         default:
             fprintf(
@@ -596,6 +598,92 @@ void MBC3::write8_ram(u16 offset, u8 value)
             fprintf(stderr, "implement RTC register 0x%02x write\n", m_ram_bank);
             return;
     }
+}
+
+MBC5::MBC5(const u8* data)
+    : NoBanking(data)
+{
+    CartHeader header(data);
+    m_rom_bank_mask = header.rom_bank_mask();
+}
+
+MBC5::~MBC5()
+{
+}
+
+u8 MBC5::read8_rom(u16 offset)
+{
+    if (offset < 0x4000)
+        return m_rom[offset];
+
+    if (offset < 0x8000) {
+        usize address = rom_bank_base() + offset - 0x4000;
+
+        if (address >= m_rom_size)
+            return 0xff;
+        return m_rom[address];
+    }
+
+    assert(false); // unreachable
+}
+
+u8 MBC5::read8_ram(u16 offset)
+{
+    if (!m_ram_enabled)
+        return 0xff;
+
+    usize address = ram_bank_base() + offset;
+
+    if (address >= m_ram_size)
+        return 0xff;
+    return m_ram[address];
+}
+
+void MBC5::write8_rom(u16 offset, u8 value)
+{
+    if (offset < 0x2000) {
+        m_ram_enabled = (value & 0x0a) == 0x0a;
+        return;
+    }
+
+    if (offset < 0x3000) {
+        m_rom_bank = (m_rom_bank & 0xff00) | (usize)value;
+        m_rom_bank &= m_rom_bank_mask;
+        return;
+    }
+
+    if (offset < 0x4000) {
+        m_rom_bank = (m_rom_bank & 0x00ff) | (usize)(value & 0x01);
+        m_rom_bank &= m_rom_bank_mask;
+        return;
+    }
+
+    if (offset < 0x6000) {
+        m_ram_bank = value & 0x0f;
+        return;
+    }
+
+    if (offset < 0x8000) {
+        fprintf(
+                stderr,
+                "WARNING: (MBC5) Writing to non-writeable ROM area 0x6000-0x7fff\n"
+               );
+        return;
+    }
+
+    assert(false); // unreachable
+}
+
+void MBC5::write8_ram(u16 offset, u8 value)
+{
+    if (!m_ram_enabled)
+        return;
+
+    usize address = ram_bank_base() + offset;
+    if (address >= m_ram_size)
+        return;
+
+    m_ram[address] = value;
 }
 
 } // namespace GB
