@@ -177,41 +177,59 @@ u8 MemoryMapper::read_io8(u8 reg)
             fprintf(stderr, "FIXME: implement NR44 read\n");
             return 0;
         case 0x24:
-            fprintf(stderr, "FIXME: implement NR50 read\n");
-            return 0;
+            return m_emulator.apu().NR50();
         case 0x25:
             return m_emulator.apu().NR51();
         case 0x26:
             return m_emulator.apu().NR52();
 
+        case 0x30: // Wave Pattern RAM
+        case 0x31:
+        case 0x32:
+        case 0x33:
+        case 0x34:
+        case 0x35:
+        case 0x36:
+        case 0x37:
+        case 0x38:
+        case 0x39:
+        case 0x3a:
+        case 0x3b:
+        case 0x3c:
+        case 0x3d:
+        case 0x3e:
+        case 0x3f:
+            return m_emulator.apu().read_wave_pattern(reg & 0x0f);
+
         case 0x40: // LCD Control
             return m_emulator.ppu().control_reg();
         case 0x41: // STAT - LCDC Status
             return m_emulator.ppu().status_reg();
+        case 0x42: // SCY - Scroll Y
+            return m_emulator.ppu().scroll_y_reg();
+        case 0x43: // SCX - Scroll X
+            return m_emulator.ppu().scroll_x_reg();
         case 0x44: // LY - LCDC Y-Coordinate
             return m_emulator.ppu().line_y();
         case 0x45: // LYC - LY Compare
             return m_emulator.ppu().ly_compare();
         case 0x47: // BGP - Background Palette Data
             return m_emulator.ppu().bg_palette_reg();
+        case 0x48: // OBP0 - Object Palette 0
+            return m_emulator.ppu().obj_palette0_reg();
+        case 0x49: // OBP1 - Object Palette 1
+            return m_emulator.ppu().obj_palette1_reg();
         case 0x4a: // WY - Window Y
             return m_emulator.ppu().window_y();
         case 0x4b: // WX - Window X
             return m_emulator.ppu().window_x();
 
-        case 0x42: // SCY - Scroll Y
-            return m_emulator.ppu().scroll_y_reg();
-        case 0x43: // SCX - Scroll X
-            return m_emulator.ppu().scroll_x_reg();
-        case 0x48: // OBP0 - Object Palette 0
-            return m_emulator.ppu().obj_palette0_reg();
-        case 0x49: // OBP1 - Object Palette 1
-            return m_emulator.ppu().obj_palette1_reg();
-
             // CGB-Only
+        case 0x4f:
         case 0x4d:
         case 0x55:
-            fprintf(stderr, "WARNING: reading from CGB-only register\n");
+        case 0x70:
+            //fprintf(stderr, "WARNING: reading from CGB-only register\n");
             return 0xff;
 
         case 0xff: // IE - Interrupt Enable
@@ -385,7 +403,8 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
         case 0x55:
         case 0x68:
         case 0x69:
-            fprintf(stderr, "WARNING: writing to CGB-only register\n");
+        case 0x70:
+            //fprintf(stderr, "WARNING: writing to CGB-only register\n");
             break;
 
         case 0x4e:

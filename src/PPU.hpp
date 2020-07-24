@@ -187,7 +187,7 @@ class PPU {
         u8 m_window_y { 0 };
         u8* m_pixels { nullptr };
         usize m_scanline_sprite_count { 0 };
-        Sprite* m_scaline_sprites[10];
+        Sprite* m_scanline_sprites[10];
 
         u8 m_bg_palette { 0 };
         u8 m_object_palette0 { 0 };

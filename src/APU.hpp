@@ -182,6 +182,10 @@ class Channel3 {
             if (m_NR34 & 0x80)
                 restart();
         }
+        inline u8 read_wave_pattern(u8 offset) const
+        {
+            return m_wave_pattern[offset];
+        }
         inline void set_wave_pattern(u8 value, u8 offset)
         {
             if (playing())
@@ -306,6 +310,10 @@ class APU {
         inline void set_NR33(u8 value) { m_channel3.set_NR33(value); }
         inline u8 NR34() const { return m_channel3.NR34(); }
         inline void set_NR34(u8 value) { m_channel3.set_NR34(value); }
+        inline u8 read_wave_pattern(u8 offset) const
+        {
+            return m_channel3.read_wave_pattern(offset);
+        }
         inline void set_wave_pattern(u8 value, u8 offset)
         {
             m_channel3.set_wave_pattern(value, offset);

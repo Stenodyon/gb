@@ -219,45 +219,41 @@ void PPU::render_pixel()
     }
 
     // Sprites
-    //   Get highest priority sprite
-    Sprite* sprite_for_pixel { nullptr };
     for (usize index = 0; index < m_scanline_sprite_count; ++index) {
-        auto* sprite = m_scaline_sprites[index];
+        auto* sprite = m_scanline_sprites[index];
 
         if ((i32)m_pixel_x < sprite->x() || (i32)m_pixel_x >= (sprite->x() + 8))
             continue;
 
-        if (!sprite_for_pixel || sprite_for_pixel->x() > sprite->x()) {
-            sprite_for_pixel = sprite;
-        }
-    }
+        auto coord_x = m_pixel_x - sprite->x();
+        auto coord_y = m_pixel_y - sprite->y();
 
-    //   Render Sprite
-    if (sprite_for_pixel) {
-        auto coord_x = m_pixel_x - sprite_for_pixel->x();
-        auto coord_y = m_pixel_y - sprite_for_pixel->y();
-
-        if (sprite_for_pixel->x_flip())
+        if (sprite->x_flip())
             coord_x = 7 - coord_x;
 
-        if (sprite_for_pixel->y_flip())
+        if (sprite->y_flip())
             coord_y = sprite_height() - coord_y - 1;
 
-        auto sprite_tile_index = sprite_for_pixel->tile_index;
+        auto sprite_tile_index = sprite->tile_index;
         if (sprite_double_height()) {
             sprite_tile_index = (sprite_tile_index & 0xfe) | (coord_y >> 3);
         }
 
         auto* sprite_tile_data = obj_tile_data(sprite_tile_index);
         auto color_index = sprite_tile_data->color_at(coord_x, coord_y & 0x07);
-        auto* palette = obj_palette(sprite_for_pixel->palette_number());
 
-        if (sprite_for_pixel->behind_bg()) {
+        if (color_index == 0)
+            continue;
+
+        auto* palette = obj_palette(sprite->palette_number());
+
+        if (sprite->behind_bg()) {
             if (bg_color_index == 0)
                 color = palette->color_for(color_index);
         } else if (color_index != 0) {
             color = palette->color_for(color_index);
         }
+        break;
     }
 
     set_pixel(m_pixel_x, m_pixel_y, color);
@@ -308,8 +304,18 @@ void PPU::gather_sprites()
 
         if ((i32)m_pixel_y >= sprite->y()
          && (i32)m_pixel_y < (sprite->y() + (i32)sprite_height())) {
-            m_scaline_sprites[m_scanline_sprite_count++] = sprite;
 
+            // Insertion sort
+            usize reverse_index = m_scanline_sprite_count;
+            while (reverse_index > 0
+                    && m_scanline_sprites[reverse_index - 1]->x_pos > sprite->x_pos)
+            {
+                m_scanline_sprites[reverse_index] = m_scanline_sprites[reverse_index - 1];
+                --reverse_index;
+            }
+            m_scanline_sprites[reverse_index] = sprite;
+
+            ++m_scanline_sprite_count;
             if (m_scanline_sprite_count >= 10)
                 break;
         }
