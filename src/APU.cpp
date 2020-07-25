@@ -223,7 +223,7 @@ void Channel1::cycle_frequency()
 void Channel1::cycle_sweep()
 {
     ++m_sweep_counter;
-    if (m_sweep_timer >= sweep_time()) {
+    if (m_sweep_counter >= sweep_time()) {
         m_sweep_counter = 0;
 
         u16 change = frequency() >> sweep_shifts();

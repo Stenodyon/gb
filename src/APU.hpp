@@ -57,8 +57,8 @@ class Channel1 {
         inline u16 period() const { return (2048 - frequency()) * 4; }
         inline u8 duty() const { return (m_NR11 & 0xc0) >> 6; }
         inline u8 sweep_time() const { return (m_NR10 & 0x70) >> 4; }
-        inline bool sweep_increases() const { return m_NR10 & 0x080; }
-        inline u8 sweep_shifts() const { return m_NR10 & 0x07; }
+        inline bool sweep_increases() const { return !(m_NR10 & 0x08); }
+        inline u8 sweep_shifts() const { return m_NR10 & 0b111; }
         inline bool stop_after_length() const { return m_NR14 & 0x40; }
         inline u8 length_counter_base() const { return 64 - (m_NR11 & 0x1f); }
         inline u8 envelope_period() const { return m_NR12 & 0x07; }
