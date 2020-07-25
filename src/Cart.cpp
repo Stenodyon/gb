@@ -403,7 +403,7 @@ void MBC1::write8_rom(u16 address, u8 value)
             bank = 1;
         m_rom_bank = (m_rom_bank & 0xe0) | bank;
         m_rom_bank &= m_rom_bank_mask;
-        //printf("New bank number: %d\n", m_rom_bank);
+        //printf("New bank number: %ld\n", m_rom_bank);
         return;
     }
 
@@ -413,7 +413,8 @@ void MBC1::write8_rom(u16 address, u8 value)
         switch (m_banking_mode) {
             case ROM_BANKING:
                 m_rom_bank = (m_rom_bank & 0x1f) | (value << 5);
-                //printf("New bank number: %d\n", m_rom_bank);
+                m_rom_bank &= m_rom_bank_mask;
+                //printf("New bank number: %ld\n", m_rom_bank);
                 break;
             case RAM_BANKING:
                 m_ram_bank = value;
@@ -576,7 +577,11 @@ u8 MBC3::read8_ram(u16 offset)
             return MBC1::read8_ram(offset);
 
         default:
-            fprintf(stderr, "implement RTC register 0x%02x read\n", m_ram_bank);
+            fprintf(
+                    stderr,
+                    "implement RTC register 0x%02x read\n",
+                    (u8)(m_ram_bank & 0xff)
+                   );
             return 0x00;
     }
 }
@@ -595,7 +600,11 @@ void MBC3::write8_ram(u16 offset, u8 value)
             return;
 
         default:
-            fprintf(stderr, "implement RTC register 0x%02x write\n", m_ram_bank);
+            fprintf(
+                    stderr,
+                    "implement RTC register 0x%02x write\n",
+                    (u8)(m_ram_bank & 0xff)
+                   );
             return;
     }
 }

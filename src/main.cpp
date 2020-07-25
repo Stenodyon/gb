@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <optional>
 
 #include "SDL.h"
 
@@ -75,13 +76,34 @@ void handle_keypress(GB::Emulator& emulator, SDL_KeyboardEvent* event)
     }
 }
 
+[[noreturn]] void panic_usage(const char* argv0) {
+    fprintf(stderr, "Usage: %s OPTIONS <rom-file>\n", argv0);
+    fprintf(stderr,
+            "\n"
+            "OPTIONS:\n"
+            "\t--trace\ttrace the opcode execution\n"
+           );
+    exit(-1);
+}
+
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <rom-file>\n", argv[0]);
-        exit(-1);
+    std::optional<const char*> maybe_filename{};
+    bool trace = false;
+
+    for (int argument_index = 1; argument_index < argc; ++argument_index) {
+        if (!strcmp(argv[argument_index], "--trace")) {
+            trace = true;
+        } else {
+            if (maybe_filename)
+                panic_usage(argv[0]);
+            maybe_filename = argv[argument_index];
+        }
     }
 
-    auto filename = argv[1];
+    if (!maybe_filename)
+        panic_usage(argv[0]);
+
+    auto filename = maybe_filename.value();
     auto rom_data = load_file(filename);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
@@ -122,6 +144,7 @@ int main(int argc, char** argv) {
 
     GB::Cart cart(rom_data);
     GB::Emulator emulator(&cart, texture);
+    emulator.enable_tracing(trace);
 
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 

@@ -27,6 +27,9 @@ class Emulator {
         inline Joypad& joypad() { return m_joypad; }
         inline Timer& timer() { return m_timer; }
 
+        inline bool trace() const { return m_trace; }
+        inline void enable_tracing(bool value) { m_trace = value; }
+
         void notify_frame_end() { m_frame_end = true; }
 
     private:
@@ -38,6 +41,7 @@ class Emulator {
         Timer m_timer;
 
         bool m_frame_end { false };
+        bool m_trace { false };
 };
 
 }

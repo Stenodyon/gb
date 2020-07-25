@@ -29,29 +29,26 @@ void LR35902::cycle()
         return;
     }
 
-#ifdef TRACE
     auto saved_PC = PC();
-#endif
-
     auto ins = Instruction::from_stream(this);
 
-#ifdef TRACE
-    if (ins.has_sub_op()) {
-        printf(
-                "\033[0;36m%#06x\033[0m: \033[0;33m0xcb %#04x\033[0m %s\n",
-                saved_PC,
-                ins.sub_op(),
-                ins.to_string().c_str()
-              );
-    } else {
-        printf(
-                "\033[0;36m%#06x\033[0m: \033[0;33m%#04x\033[0m      %s\n",
-                saved_PC,
-                ins.opcode(),
-                ins.to_string().c_str()
-              );
+    if (m_emulator.trace()) {
+        if (ins.has_sub_op()) {
+            printf(
+                    "\033[0;36m%#06x\033[0m: \033[0;33m0xcb %#04x\033[0m %s\n",
+                    saved_PC,
+                    ins.sub_op(),
+                    ins.to_string().c_str()
+                  );
+        } else {
+            printf(
+                    "\033[0;36m%#06x\033[0m: \033[0;33m%#04x\033[0m      %s\n",
+                    saved_PC,
+                    ins.opcode(),
+                    ins.to_string().c_str()
+                  );
+        }
     }
-#endif
     (this->*ins.handler())(ins);
 }
 
@@ -257,6 +254,8 @@ bool LR35902::handle_interrupt()
         m_halted = false;
         m_interrupts_enabled = false;
         m_interrupt_flag_reg &= ~0x01;
+        if (m_emulator.trace())
+            m_debug_call_stack.push_back(0x0040);
         push16(PC());
         setPC(0x0040);
 
@@ -267,6 +266,8 @@ bool LR35902::handle_interrupt()
         m_halted = false;
         m_interrupts_enabled = false;
         m_interrupt_flag_reg &= ~0x02;
+        if (m_emulator.trace())
+            m_debug_call_stack.push_back(0x0048);
         push16(PC());
         setPC(0x0048);
 
@@ -277,6 +278,8 @@ bool LR35902::handle_interrupt()
         m_halted = false;
         m_interrupts_enabled = false;
         m_interrupt_flag_reg &= ~0x04;
+        if (m_emulator.trace())
+            m_debug_call_stack.push_back(0x0050);
         push16(PC());
         setPC(0x0050);
 
@@ -287,6 +290,8 @@ bool LR35902::handle_interrupt()
         m_halted = false;
         m_interrupts_enabled = false;
         m_interrupt_flag_reg &= ~0x08;
+        if (m_emulator.trace())
+            m_debug_call_stack.push_back(0x0058);
         push16(PC());
         setPC(0x0058);
 
@@ -297,6 +302,8 @@ bool LR35902::handle_interrupt()
         m_halted = false;
         m_interrupts_enabled = false;
         m_interrupt_flag_reg &= ~0x10;
+        if (m_emulator.trace())
+            m_debug_call_stack.push_back(0x0060);
         push16(PC());
         setPC(0x0060);
 
@@ -1005,6 +1012,8 @@ void LR35902::JR_cond(const Instruction& ins)
 
 void LR35902::CALL(const Instruction& ins)
 {
+    if (m_emulator.trace())
+        m_debug_call_stack.push_back(ins.imm16());
     push16(PC());
     setPC(ins.imm16());
     do_cycle();
@@ -1015,6 +1024,8 @@ void LR35902::CALL(const Instruction& ins)
 void LR35902::CALL_cond(const Instruction& ins)
 {
     if (check_condition(ins.condition())) {
+        if (m_emulator.trace())
+            m_debug_call_stack.push_back(ins.imm16());
         push16(PC());
         setPC(ins.imm16());
         do_cycle();
@@ -1025,6 +1036,12 @@ void LR35902::CALL_cond(const Instruction& ins)
 
 void LR35902::RET(const Instruction&)
 {
+    if (m_emulator.trace()) {
+        if (m_debug_call_stack.empty())
+            fprintf(stderr, "WARNING: RET with empty call stack\n");
+        else
+            m_debug_call_stack.pop_back();
+    }
     setPC(pop16());
     do_cycle();
     do_cycle();
@@ -1035,6 +1052,12 @@ void LR35902::RET_cond(const Instruction& ins)
 {
     do_cycle();
     if (check_condition(ins.condition())) {
+        if (m_emulator.trace()) {
+            if (m_debug_call_stack.empty())
+                fprintf(stderr, "WARNING: RET with empty call stack\n");
+            else
+                m_debug_call_stack.pop_back();
+        }
         setPC(pop16());
         do_cycle();
         do_cycle();
@@ -1045,6 +1068,12 @@ void LR35902::RET_cond(const Instruction& ins)
 void LR35902::RETI(const Instruction&)
 {
     m_interrupts_enabled = true;
+    if (m_emulator.trace()) {
+        if (m_debug_call_stack.empty())
+            fprintf(stderr, "WARNING: RET with empty call stack\n");
+        else
+            m_debug_call_stack.pop_back();
+    }
     setPC(pop16());
     do_cycle();
     do_cycle();

@@ -115,8 +115,8 @@ class MBC1 : public NoBanking {
         bool m_ram_enabled { false };
         BankingMode m_banking_mode { ROM_BANKING };
         usize m_rom_bank_mask { 0xffff };
-        u8 m_rom_bank { 1 };
-        u8 m_ram_bank { 0 };
+        usize m_rom_bank { 1 };
+        usize m_ram_bank { 0 };
 };
 
 class MBC2 : public NoBanking {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "Defs.hpp"
 #include "Instruction.hpp"
 
@@ -268,6 +270,8 @@ class LR35902 final
         bool m_doing_dma { false };
         u8 m_dma_source_sector { 0 };
         usize m_dma_progress { 0 };
+
+        std::vector<u16> m_debug_call_stack {};
 };
 
 }
