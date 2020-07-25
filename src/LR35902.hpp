@@ -15,6 +15,7 @@ class LR35902 final
         ~LR35902() {}
 
         void cycle();
+        bool stopped() const { return m_stopped; }
         bool halted() const { return m_halted; }
         void dump_registers() const;
 
@@ -257,6 +258,7 @@ class LR35902 final
         u16 m_PC;
         u16 m_SP;
         u8 m_registers[8];
+        bool m_stopped { false };
         bool m_halted { false };
         bool m_interrupts_enabled { true };
 

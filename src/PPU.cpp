@@ -189,6 +189,11 @@ bool PPU::inside_window(u8 x, u8 y)
 
 void PPU::render_pixel()
 {
+    if (m_emulator.cpu().stopped()) {
+        set_pixel(m_pixel_x, m_pixel_y, 0);
+        return;
+    }
+
     u8 bg_color_index = 0;
     u8 color = 0;
 

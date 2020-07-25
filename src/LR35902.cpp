@@ -247,8 +247,8 @@ bool LR35902::handle_interrupt()
     if (triggerable_interrupts == 0)
         return false;
 
-    if (m_halted)
-        m_halted = false;
+    m_stopped = false;
+    m_halted = false;
 
     if (!m_interrupts_enabled)
         return false;
@@ -312,7 +312,8 @@ void LR35902::NOP(const Instruction&)
 
 void LR35902::STOP(const Instruction&)
 {
-    assert(false); // TODO
+    setPC(PC() + 1); // next byte is always skipped
+    m_stopped = true;
 }
 
 void LR35902::HALT(const Instruction&)

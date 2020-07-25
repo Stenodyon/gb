@@ -152,36 +152,64 @@ u8 MemoryMapper::read_io8(u8 reg)
         case 0x0f: // IF - Interrupt Flag
             return m_emulator.cpu().interrupt_flag();
 
+        case 0x10:
+            return m_emulator.apu().NR10();
         case 0x11:
             return m_emulator.apu().NR11();
         case 0x12:
             return m_emulator.apu().NR12();
+        case 0x13: // = 0xff
+            return m_emulator.apu().NR13();
         case 0x14:
             return m_emulator.apu().NR14();
+        case 0x15: // = 0xff
+            return m_emulator.apu().NR20();
         case 0x16:
             return m_emulator.apu().NR21();
         case 0x17:
             return m_emulator.apu().NR22();
+        case 0x18: // = 0xff
+            return m_emulator.apu().NR23();
         case 0x19:
             return m_emulator.apu().NR24();
         case 0x1a:
             return m_emulator.apu().NR30();
+        case 0x1b: // = 0xff
+            return m_emulator.apu().NR31();
         case 0x1c:
             return m_emulator.apu().NR32();
+        case 0x1d: // = 0xff
+            return m_emulator.apu().NR33();
         case 0x1e:
             return m_emulator.apu().NR34();
+        case 0x1f:
+            return m_emulator.apu().NR40();
+        case 0x20:
+            return m_emulator.apu().NR41();
         case 0x21:
-            fprintf(stderr, "FIXME: implement NR42 read\n");
-            return 0;
+            return m_emulator.apu().NR42();
+        case 0x22:
+            return m_emulator.apu().NR43();
         case 0x23:
-            fprintf(stderr, "FIXME: implement NR44 read\n");
-            return 0;
+            return m_emulator.apu().NR44();
         case 0x24:
             return m_emulator.apu().NR50();
         case 0x25:
             return m_emulator.apu().NR51();
         case 0x26:
             return m_emulator.apu().NR52();
+
+        case 0x27:
+        case 0x28:
+        case 0x29:
+        case 0x2a:
+        case 0x2b:
+        case 0x2c:
+        case 0x2d:
+        case 0x2e:
+        case 0x2f:
+            fprintf(stderr, "WARNING: reading from unused io register 0x%02x\n", reg);
+            return 0xff;
 
         case 0x30: // Wave Pattern RAM
         case 0x31:
@@ -288,6 +316,9 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
         case 0x14:
             m_emulator.apu().set_NR14(value);
             break;
+        case 0x15:
+            fprintf(stderr, "WARNING: writing to unused io register 0x%02x\n", reg);
+            break;
         case 0x16:
             m_emulator.apu().set_NR21(value);
             break;
@@ -315,17 +346,20 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
         case 0x1e:
             m_emulator.apu().set_NR34(value);
             break;
+        case 0x1f:
+            fprintf(stderr, "WARNING: writing to unused io register 0x%02x\n", reg);
+            break;
         case 0x20:
-            fprintf(stderr, "FIXME: implement NR41 write\n");
+            m_emulator.apu().set_NR41(value);
             break;
         case 0x21:
-            fprintf(stderr, "FIXME: implement NR42 write\n");
+            m_emulator.apu().set_NR42(value);
             break;
         case 0x22:
-            fprintf(stderr, "FIXME: implement NR43 write\n");
+            m_emulator.apu().set_NR43(value);
             break;
         case 0x23:
-            fprintf(stderr, "FIXME: implement NR44 write\n");
+            m_emulator.apu().set_NR44(value);
             break;
         case 0x24:
             m_emulator.apu().set_NR50(value);
@@ -335,6 +369,18 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
             break;
         case 0x26:
             m_emulator.apu().set_NR52(value);
+            break;
+
+        case 0x27:
+        case 0x28:
+        case 0x29:
+        case 0x2a:
+        case 0x2b:
+        case 0x2c:
+        case 0x2d:
+        case 0x2e:
+        case 0x2f:
+            fprintf(stderr, "WARNING: writing to unused io register 0x%02x\n", reg);
             break;
 
         case 0x30: // Wave Pattern RAM
