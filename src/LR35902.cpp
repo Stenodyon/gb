@@ -24,7 +24,7 @@ void LR35902::cycle()
     if (handle_interrupt())
         return;
 
-    if (halted()) {
+    if (stopped() || halted()) {
         do_cycle();
         return;
     }
