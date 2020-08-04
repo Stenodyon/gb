@@ -1,7 +1,8 @@
 # GUEMBOI
 
 This GameBoy emulator runs several games (like the Pokémon games and Link's
-Awakening) but still crashes on others (Kirby's Dream Land grr).
+Awakening) but still crashes on others (Kirby's Dream Land grr). Has sound
+support but does not emulate GameBoy Color features (some games require it).
 
 ![screenshots](https://github.com/Stenodyon/gb/raw/master/mosaic.png)
 
