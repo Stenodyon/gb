@@ -181,6 +181,8 @@ class PPU {
         usize m_dot_count { 0 };
         usize m_pixel_x { 0 };
         usize m_pixel_y { 0 };
+        usize m_window_line { 0 };
+        bool m_was_window { false };
         u8 m_scroll_x { 0 };
         u8 m_scroll_y { 0 };
         u8 m_window_x { 0 };

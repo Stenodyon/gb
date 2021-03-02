@@ -447,6 +447,7 @@ void MemoryMapper::write_io8(u8 reg, u8 value)
         case 0x53:
         case 0x54:
         case 0x55:
+        case 0x56:
         case 0x68:
         case 0x69:
         case 0x70:

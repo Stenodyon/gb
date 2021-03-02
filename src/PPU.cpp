@@ -78,6 +78,7 @@ void PPU::cycle()
 
             if (m_dot_count == 80) {
                 m_dot_count = 0;
+                m_was_window = false;
                 m_mode = ModeFlag::TRANSFER;
             }
             break;
@@ -89,6 +90,8 @@ void PPU::cycle()
                 m_dot_count = 0;
                 m_mode = ModeFlag::HBLANK;
                 m_pixel_x = 0;
+                if (m_was_window)
+                    ++m_window_line;
             }
             break;
 
@@ -121,6 +124,7 @@ void PPU::cycle()
             if (m_dot_count == 4560) {
                 m_dot_count = 0;
                 set_line_y(0);
+                m_window_line = 0;
                 m_mode = ModeFlag::OAM;
             }
             break;
@@ -204,9 +208,10 @@ void PPU::render_pixel()
 
     if (bg_display_enabled()) {
         if (window_display_enabled() && inside_window(m_pixel_x, m_pixel_y)) {
+            m_was_window = true;
             bg_color_index = window_color_at(
                     m_pixel_x + 7 - m_window_x,
-                    m_pixel_y - m_window_y
+                    m_window_line
                     );
             color = bg_palette()->color_for(bg_color_index);
         } else {
@@ -252,10 +257,9 @@ void PPU::render_pixel()
 
         auto* palette = obj_palette(sprite->palette_number());
 
-        if (sprite->behind_bg()) {
-            if (bg_color_index == 0)
-                color = palette->color_for(color_index);
-        } else if (color_index != 0) {
+        if (bg_color_index == 0) {
+            color = palette->color_for(color_index);
+        } else if (!sprite->behind_bg() || color_index == 0) {
             color = palette->color_for(color_index);
         }
         break;
