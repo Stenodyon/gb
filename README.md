@@ -9,7 +9,7 @@ support but does not emulate GameBoy Color features.
 ## Building & Using
 
 I wouldn't recomment it but if you insist… You can build it on Linux, you'll
-need `make`, `g++` and the `SDL2` library. Just `make -j4` and you should be
+need `make`, `g++` and the `SDL2` library. Just `make` and you should be
 good.
 
 Controls:
